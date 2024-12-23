@@ -43,7 +43,10 @@ class BalanceTab extends StatelessWidget {
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                     Text(
-                      '${transactions.map((t) => t.amount).reduce((a, b) => a + b).toStringAsFixed(2)}',
+                      transactions
+                          .map((t) => t.amount)
+                          .reduce((a, b) => a + b)
+                          .toStringAsFixed(2),
                       style: const TextStyle(fontSize: 24),
                     ),
                   ],
@@ -58,7 +61,11 @@ class BalanceTab extends StatelessWidget {
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                         Text(
-                          '${transactions.where((t) => t.amount > 0).map((t) => t.amount).reduce((a, b) => a + b).toStringAsFixed(2)}',
+                          transactions
+                              .where((t) => t.amount > 0)
+                              .map((t) => t.amount)
+                              .reduce((a, b) => a + b)
+                              .toStringAsFixed(2),
                         ),
                       ],
                     ),
@@ -69,7 +76,11 @@ class BalanceTab extends StatelessWidget {
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                         Text(
-                          '${transactions.where((t) => t.amount < 0).map((t) => t.amount).reduce((a, b) => a + b).toStringAsFixed(2)}',
+                          transactions
+                              .where((t) => t.amount < 0)
+                              .map((t) => t.amount)
+                              .reduce((a, b) => a + b)
+                              .toStringAsFixed(2),
                         ),
                       ],
                     ),
