@@ -1,26 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../../widgets/transaction.dart';
+import '../../models/transaction_model.dart';
 import 'transaction_details_view.dart';
 
 class BalanceTab extends StatelessWidget {
   const BalanceTab({
     super.key,
-    this.transactions = const [
-      Transaction(1, "Lunch", "Alipay", -24.9, "HKD"),
-      Transaction(
-        2,
-        "Dinner",
-        "Gold Card",
-        -233.54,
-        "HKD",
-      ),
-      Transaction(3, "Hotel", "MMP Card", -2300.75, "JPY"),
-      Transaction(4, "TSFS", "HSBC", 5600, "HKD"),
-    ],
   });
-
-  final List<Transaction> transactions;
 
   @override
   Widget build(BuildContext context) {
@@ -42,13 +28,13 @@ class BalanceTab extends StatelessWidget {
                       'Total Balance',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    Text(
-                      transactions
-                          .map((t) => t.amount)
-                          .reduce((a, b) => a + b)
-                          .toStringAsFixed(2),
-                      style: const TextStyle(fontSize: 24),
-                    ),
+                    // Text(
+                    //   transactions
+                    //       .map((t) => t.amount)
+                    //       .reduce((a, b) => a + b)
+                    //       .toStringAsFixed(2),
+                    //   style: const TextStyle(fontSize: 24),
+                    // ),
                   ],
                 ),
                 Row(
@@ -60,13 +46,13 @@ class BalanceTab extends StatelessWidget {
                           'Income',
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        Text(
-                          transactions
-                              .where((t) => t.amount > 0)
-                              .map((t) => t.amount)
-                              .reduce((a, b) => a + b)
-                              .toStringAsFixed(2),
-                        ),
+                        // Text(
+                        //   transactions
+                        //       .where((t) => t.amount > 0)
+                        //       .map((t) => t.amount)
+                        //       .reduce((a, b) => a + b)
+                        //       .toStringAsFixed(2),
+                        // ),
                       ],
                     ),
                     Column(
@@ -75,13 +61,13 @@ class BalanceTab extends StatelessWidget {
                           'Expense',
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        Text(
-                          transactions
-                              .where((t) => t.amount < 0)
-                              .map((t) => t.amount)
-                              .reduce((a, b) => a + b)
-                              .toStringAsFixed(2),
-                        ),
+                        // Text(
+                        //   transactions
+                        //       .where((t) => t.amount < 0)
+                        //       .map((t) => t.amount)
+                        //       .reduce((a, b) => a + b)
+                        //       .toStringAsFixed(2),
+                        // ),
                       ],
                     ),
                   ],
@@ -90,33 +76,50 @@ class BalanceTab extends StatelessWidget {
             ),
           ),
         ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            ElevatedButton(
+              onPressed: () {
+                // Add your onPressed code here for adding a new account
+              },
+              child: const Text('Add Account'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Add your onPressed code here for adding a new category
+              },
+              child: const Text('Add Category'),
+            ),
+          ],
+        ),
         const Row(
           children: [
             Text("Transactions",
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ],
         ),
-        Expanded(
-          child: ListView.builder(
-            itemCount: transactions.length,
-            itemBuilder: (BuildContext context, int index) {
-              return ListTile(
-                leading: const Icon(Icons.money),
-                title: Text(transactions[index].name),
-                subtitle: Text(transactions[index].account),
-                trailing: Text(
-                    '${transactions[index].amount} ${transactions[index].currency}',
-                    style: TextStyle(fontSize: 18)),
-                onTap: () {
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => TransactionDetailsView()));
-                },
-              );
-            },
-          ),
-        ),
+        // Expanded(
+        //   child: ListView.builder(
+        //     itemCount: transactions.length,
+        //     itemBuilder: (BuildContext context, int index) {
+        //       return ListTile(
+        //         leading: const Icon(Icons.money),
+        //         title: Text(transactions[index].name),
+        //         subtitle: Text(transactions[index].account),
+        //         trailing: Text(
+        //             '${transactions[index].amount} ${transactions[index].currency}',
+        //             style: TextStyle(fontSize: 18)),
+        //         onTap: () {
+        //           Navigator.push(
+        //               context,
+        //               MaterialPageRoute(
+        //                   builder: (context) => TransactionDetailsView()));
+        //         },
+        //       );
+        //     },
+        //   ),
+        // ),
       ],
     );
   }

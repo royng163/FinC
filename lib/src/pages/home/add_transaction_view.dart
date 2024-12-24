@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../models/transaction_model.dart';
+import 'package:intl/intl.dart';
+import '../../helpers/firestore_service.dart';
+import 'package:flutter/services.dart';
 
 class AddTransactionView extends StatefulWidget {
   const AddTransactionView({super.key});
@@ -29,7 +34,82 @@ class AddTransactionViewState extends State<AddTransactionView> {
     "Health",
   ];
 
-  final TextEditingController dateTimeController = TextEditingController();
+  final TextEditingController transactionNameController =
+      TextEditingController();
+  final TextEditingController amountController = TextEditingController();
+  final TextEditingController descriptionController = TextEditingController();
+  final TextEditingController transactionTimeController =
+      TextEditingController();
+
+  late Firestore firestore;
+
+  @override
+  void initState() {
+    super.initState();
+    firestore = Firestore();
+    // Initialize the dateTimeController with the current date
+    transactionTimeController.text = DateTime.now().toString();
+  }
+
+  @override
+  void dispose() {
+    transactionNameController.dispose();
+    amountController.dispose();
+    descriptionController.dispose();
+    transactionTimeController.dispose();
+    super.dispose();
+  }
+
+  void addTransaction() async {
+    try {
+      final String userId = firestore.db.collection("Users").doc().id;
+      final String transactionId =
+          firestore.db.collection('Transactions').doc().id;
+
+      final TransactionModel transaction = TransactionModel(
+        transactionId: transactionId,
+        userId: userId,
+        accountId: selectedAccount, // Replace with actual account ID
+        categoryId: selectedCategory, // Replace with actual category ID
+        transactionName: transactionNameController.text,
+        amount: double.parse(amountController.text),
+        currency: "HKD", // Replace with actual currency if needed
+        description: descriptionController.text,
+        transactionType: type[selectedType],
+        transactionTime: Timestamp.fromDate(
+            DateFormat('yy-MM-dd HH:mm').parse(transactionTimeController.text)),
+      );
+
+      await firestore.createTransaction(transaction);
+
+      if (!mounted) return;
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Transaction Added Successfully')),
+      );
+
+      // Clear the form
+      transactionNameController.clear();
+      amountController.clear();
+      descriptionController.clear();
+      setState(() {
+        selectedType = 0;
+        selectedAccount = "";
+        selectedCategory = "";
+        transactionTimeController.text =
+            DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now());
+      });
+
+      // Optionally, navigate back or perform other actions
+      // Navigator.pop(context);
+    } catch (e) {
+      // Handle errors gracefully
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to add transaction: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,9 +117,9 @@ class AddTransactionViewState extends State<AddTransactionView> {
         appBar: AppBar(
           title: const Text('New Transaction'),
         ),
-        body: Form(
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
+        body: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Form(
             child: Column(
               spacing: 8,
               children: [
@@ -119,19 +199,49 @@ class AddTransactionViewState extends State<AddTransactionView> {
                   ],
                 ),
                 TextFormField(
+                  controller: transactionNameController,
                   decoration: const InputDecoration(
-                      hintText: "Transaction Name",
+                      labelText: "Name",
+                      hintText: "e.g. Lunch",
                       border: OutlineInputBorder()),
                   keyboardType: TextInputType.text,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a transaction name';
+                    }
+                    return null;
+                  },
                 ),
                 TextFormField(
+                  controller: amountController,
                   decoration: const InputDecoration(
-                      hintText: "Amount", border: OutlineInputBorder()),
-                  keyboardType: TextInputType.number,
+                      labelText: "Amount",
+                      hintText: "e.g. 79.9",
+                      border: OutlineInputBorder()),
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    // Allow only numbers and decimal point, and limit to two decimal places
+                    FilteringTextInputFormatter.allow(
+                        RegExp(r'^\d+\.?\d{0,2}')),
+                  ],
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter an amount';
+                    }
+                    if (double.tryParse(value) == null) {
+                      return 'Please enter a valid number';
+                    }
+                    final parts = value.split('.');
+                    if (parts.length == 2 && parts[1].length > 2) {
+                      return 'Amount cannot have more than two decimal places';
+                    }
+                    return null;
+                  },
                 ),
                 TextFormField(
+                  controller: descriptionController,
                   decoration: const InputDecoration(
-                      hintText: "Description", border: OutlineInputBorder()),
+                      labelText: "Description", border: OutlineInputBorder()),
                   keyboardType: TextInputType.text,
                 ),
                 Row(
@@ -139,70 +249,49 @@ class AddTransactionViewState extends State<AddTransactionView> {
                     Text("Date & Time"),
                   ],
                 ),
-                FormField(
-                  builder: (FormFieldState<dynamic> field) {
-                    return Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      spacing: 8,
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: TextEditingController(
-                              text: "${DateTime.now().toLocal()}".split(' ')[0],
-                            ),
-                            decoration: const InputDecoration(
-                                hintText: "Select Date",
-                                border: OutlineInputBorder()),
-                            readOnly: true,
-                            onTap: () async {
-                              DateTime? pickedDate = await showDatePicker(
-                                context: context,
-                                initialDate: DateTime.now(),
-                                firstDate: DateTime(2000),
-                                lastDate: DateTime.now(),
-                              );
-
-                              if (pickedDate != null) {
-                                setState(() {
-                                  dateTimeController.text =
-                                      "${pickedDate.toLocal()}".split(' ')[0];
-                                });
-                              }
-                            },
-                          ),
-                        ),
-                        Expanded(
-                          child: TextFormField(
-                            controller: TextEditingController(
-                                text: TimeOfDay.now().format(context)),
-                            decoration: const InputDecoration(
-                                hintText: "Select Time",
-                                border: OutlineInputBorder()),
-                            readOnly: true,
-                            onTap: () async {
-                              TimeOfDay? pickedTime = await showTimePicker(
-                                context: context,
-                                initialTime: TimeOfDay.now(),
-                              );
-
-                              if (pickedTime != null) {
-                                setState(() {
-                                  dateTimeController.text =
-                                      "${dateTimeController.text} ${pickedTime.format(context)}";
-                                });
-                              }
-                            },
-                          ),
-                        ),
-                      ],
+                TextFormField(
+                  controller: transactionTimeController,
+                  decoration: const InputDecoration(
+                    labelText: "Date & Time",
+                    border: OutlineInputBorder(),
+                    suffixIcon: Icon(Icons.calendar_today),
+                  ),
+                  readOnly: true,
+                  onTap: () async {
+                    DateTime? pickedDate = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime.now(),
                     );
+
+                    if (pickedDate != null) {
+                      TimeOfDay? pickedTime = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay.now(),
+                      );
+
+                      if (pickedTime != null) {
+                        final combinedDateTime = DateTime(
+                          pickedDate.year,
+                          pickedDate.month,
+                          pickedDate.day,
+                          pickedTime.hour,
+                          pickedTime.minute,
+                        );
+
+                        setState(() {
+                          transactionTimeController.text =
+                              DateFormat('yy-MM-dd HH:mm')
+                                  .format(combinedDateTime);
+                        });
+                      }
+                    }
                   },
                 ),
                 ElevatedButton(
-                  onPressed: () {
-                    // Save the transaction
-                  },
-                  child: const Text("Save"),
+                  onPressed: addTransaction,
+                  child: const Text("Add"),
                 ),
               ],
             ),
