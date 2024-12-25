@@ -4,7 +4,7 @@ import '../models/account_model.dart';
 import '../models/transaction_model.dart';
 import '../models/category_model.dart';
 
-class Firestore {
+class FirestoreService {
   final FirebaseFirestore db = FirebaseFirestore.instance;
 
   // Users Collection

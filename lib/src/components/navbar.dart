@@ -1,10 +1,10 @@
-import 'package:finc/src/pages/settings/settings_view.dart';
+import 'package:finc/src/pages/settings/settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:adaptive_navigation/adaptive_navigation.dart';
+import 'package:go_router/go_router.dart';
 import '../pages/home/home_page.dart';
 import '../pages/accounts/accounts_page.dart';
-import '../pages/settings/settings_controller.dart';
-import '../pages/home/add_transaction_view.dart';
+import 'settings_controller.dart';
 
 class NavBar extends StatefulWidget {
   const NavBar({
@@ -27,40 +27,29 @@ class NavBarState extends State<NavBar> {
     GlobalKey<NavigatorState>(), // Settings Navigator
   ];
 
-  // Define the destinations
-  final List<AdaptiveScaffoldDestination> destinations = [
-    AdaptiveScaffoldDestination(
-      title: 'Home',
-      icon: Icons.home,
-    ),
-    AdaptiveScaffoldDestination(
-      title: 'Accounts',
-      icon: Icons.credit_card,
-    ),
+  final List<String> routes = [
+    '/home',
+    '/accounts',
+    '/settings',
   ];
 
-  // Build individual Navigators for each tab
   Widget buildOffstageNavigator(int index) {
     return Offstage(
       offstage: currentIndex != index,
       child: Navigator(
-        key: navigatorKeys[index],
         onGenerateRoute: (RouteSettings settings) {
-          Widget page;
-          switch (index) {
-            case 0:
-              page = const HomePage();
-              break;
-            case 1:
-              page = const AccountsPage();
-              break;
-            case 2:
-              page = SettingsView(controller: widget.settingsController);
-              break;
-            default:
-              page = const HomePage();
-          }
-          return MaterialPageRoute(builder: (_) => page);
+          return MaterialPageRoute(builder: (context) {
+            switch (index) {
+              case 0:
+                return const HomePage();
+              case 1:
+                return const AccountsPage();
+              case 2:
+                return SettingsPage(controller: widget.settingsController);
+              default:
+                return const HomePage();
+            }
+          });
         },
       ),
     );
@@ -100,12 +89,19 @@ class NavBarState extends State<NavBar> {
         ],
       ),
       selectedIndex: currentIndex,
-      destinations: destinations,
+      destinations: [
+        AdaptiveScaffoldDestination(
+          title: 'Home',
+          icon: Icons.home,
+        ),
+        AdaptiveScaffoldDestination(
+          title: 'Accounts',
+          icon: Icons.credit_card,
+        ),
+      ],
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (context) => const AddTransactionView()),
-          );
+          context.push('/add-transaction');
         },
         child: const Icon(Icons.add),
       ),

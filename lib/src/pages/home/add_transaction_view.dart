@@ -41,12 +41,12 @@ class AddTransactionViewState extends State<AddTransactionView> {
   final TextEditingController transactionTimeController =
       TextEditingController();
 
-  late Firestore firestore;
+  late FirestoreService firestore;
 
   @override
   void initState() {
     super.initState();
-    firestore = Firestore();
+    firestore = FirestoreService();
     // Initialize the dateTimeController with the current date
     transactionTimeController.text = DateTime.now().toString();
   }
