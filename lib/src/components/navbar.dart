@@ -23,37 +23,13 @@ class NavBarState extends State<NavBar> {
 
   final List<GlobalKey<NavigatorState>> navigatorKeys = [
     GlobalKey<NavigatorState>(), // Home Navigator
-    GlobalKey<NavigatorState>(), // Accounts Navigator
-    GlobalKey<NavigatorState>(), // Settings Navigator
+    GlobalKey<NavigatorState>(), // Accounts Navigatorator
   ];
 
-  final List<String> routes = [
-    '/home',
-    '/accounts',
-    '/settings',
+  final List<Widget> pages = [
+    const HomePage(),
+    const AccountsPage(),
   ];
-
-  Widget buildOffstageNavigator(int index) {
-    return Offstage(
-      offstage: currentIndex != index,
-      child: Navigator(
-        onGenerateRoute: (RouteSettings settings) {
-          return MaterialPageRoute(builder: (context) {
-            switch (index) {
-              case 0:
-                return const HomePage();
-              case 1:
-                return const AccountsPage();
-              case 2:
-                return SettingsPage(controller: widget.settingsController);
-              default:
-                return const HomePage();
-            }
-          });
-        },
-      ),
-    );
-  }
 
   void onTap(int index) {
     setState(() {
@@ -75,18 +51,15 @@ class NavBarState extends State<NavBar> {
           IconButton(
             icon: const Icon(Icons.account_circle),
             onPressed: () {
-              onTap(2);
+              context.push('/settings');
             },
           ),
         ],
       ),
       onDestinationSelected: onTap,
-      body: Stack(
-        children: [
-          buildOffstageNavigator(0),
-          buildOffstageNavigator(1),
-          buildOffstageNavigator(2),
-        ],
+      body: IndexedStack(
+        index: currentIndex,
+        children: pages,
       ),
       selectedIndex: currentIndex,
       destinations: [
@@ -101,7 +74,7 @@ class NavBarState extends State<NavBar> {
       ],
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          context.push('/add-transaction');
+          context.go('/home/add-transaction');
         },
         child: const Icon(Icons.add),
       ),

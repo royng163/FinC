@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-
-import '../../models/transaction_model.dart';
-import 'transaction_details_view.dart';
+import 'package:go_router/go_router.dart';
 
 class BalanceTab extends StatelessWidget {
   const BalanceTab({
@@ -81,7 +79,7 @@ class BalanceTab extends StatelessWidget {
           children: [
             ElevatedButton(
               onPressed: () {
-                // Add your onPressed code here for adding a new account
+                context.go('/home/add-account');
               },
               child: const Text('Add Account'),
             ),

@@ -4,9 +4,13 @@ import '../../models/transaction_model.dart';
 import 'package:intl/intl.dart';
 import '../../helpers/firestore_service.dart';
 import 'package:flutter/services.dart';
+import 'package:currency_picker/currency_picker.dart';
+import '../../components/settings_controller.dart';
 
 class AddTransactionView extends StatefulWidget {
-  const AddTransactionView({super.key});
+  final SettingsController settingsController;
+
+  const AddTransactionView({super.key, required this.settingsController});
 
   @override
   AddTransactionViewState createState() => AddTransactionViewState();
@@ -37,6 +41,7 @@ class AddTransactionViewState extends State<AddTransactionView> {
   final TextEditingController transactionNameController =
       TextEditingController();
   final TextEditingController amountController = TextEditingController();
+  final TextEditingController currencyController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
   final TextEditingController transactionTimeController =
       TextEditingController();
@@ -47,6 +52,7 @@ class AddTransactionViewState extends State<AddTransactionView> {
   void initState() {
     super.initState();
     firestore = FirestoreService();
+    currencyController.text = widget.settingsController.baseCurrency;
     // Initialize the dateTimeController with the current date
     transactionTimeController.text = DateTime.now().toString();
   }
@@ -55,6 +61,7 @@ class AddTransactionViewState extends State<AddTransactionView> {
   void dispose() {
     transactionNameController.dispose();
     amountController.dispose();
+    currencyController.dispose();
     descriptionController.dispose();
     transactionTimeController.dispose();
     super.dispose();
@@ -73,7 +80,7 @@ class AddTransactionViewState extends State<AddTransactionView> {
         categoryId: selectedCategory, // Replace with actual category ID
         transactionName: transactionNameController.text,
         amount: double.parse(amountController.text),
-        currency: "HKD", // Replace with actual currency if needed
+        currency: currencyController.text,
         description: descriptionController.text,
         transactionType: type[selectedType],
         transactionTime: Timestamp.fromDate(
@@ -234,6 +241,33 @@ class AddTransactionViewState extends State<AddTransactionView> {
                     final parts = value.split('.');
                     if (parts.length == 2 && parts[1].length > 2) {
                       return 'Amount cannot have more than two decimal places';
+                    }
+                    return null;
+                  },
+                ),
+                TextFormField(
+                  controller: currencyController,
+                  readOnly: true,
+                  decoration: const InputDecoration(
+                    labelText: "Currency",
+                    border: OutlineInputBorder(),
+                  ),
+                  onTap: () {
+                    showCurrencyPicker(
+                      context: context,
+                      showFlag: true,
+                      showCurrencyName: true,
+                      showCurrencyCode: true,
+                      onSelect: (Currency currency) {
+                        setState(() {
+                          currencyController.text = currency.code;
+                        });
+                      },
+                    );
+                  },
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please select a currency';
                     }
                     return null;
                   },

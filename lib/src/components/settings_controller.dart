@@ -8,23 +8,25 @@ import '../helpers/settings_service.dart';
 /// Controllers glue Data Services to Flutter Widgets. The SettingsController
 /// uses the SettingsService to store and retrieve user settings.
 class SettingsController with ChangeNotifier {
-  SettingsController(this._settingsService);
+  SettingsController(this.settingsService);
 
   // Make SettingsService a private variable so it is not used directly.
-  final SettingsService _settingsService;
+  final SettingsService settingsService;
 
-  // Make ThemeMode a private variable so it is not updated directly without
-  // also persisting the changes with the SettingsService.
+  // The user's preferred ThemeMode.
   late ThemeMode _themeMode;
-
-  // Allow Widgets to read the user's preferred ThemeMode.
   ThemeMode get themeMode => _themeMode;
+
+  // The user's preferred base currency.
+  late String _baseCurrency;
+  String get baseCurrency => _baseCurrency;
 
   /// Load the user's settings from the SettingsService. It may load from a
   /// local database or the internet. The controller only knows it can load the
   /// settings from the service.
   Future<void> loadSettings() async {
-    _themeMode = await _settingsService.themeMode();
+    _themeMode = await settingsService.themeMode();
+    _baseCurrency = await settingsService.baseCurrency();
 
     // Important! Inform listeners a change has occurred.
     notifyListeners();
@@ -45,6 +47,24 @@ class SettingsController with ChangeNotifier {
 
     // Persist the changes to a local database or the internet using the
     // SettingService.
-    await _settingsService.updateThemeMode(newThemeMode);
+    await settingsService.updateThemeMode(newThemeMode);
+  }
+
+  /// Update and persist the base currency based on the user's selection.
+  Future<void> updateBaseCurrency(String newBaseCurrency) async {
+    if (newBaseCurrency.isEmpty) return;
+
+    // Do not perform any work if new and old base currency are identical
+    if (newBaseCurrency == _baseCurrency) return;
+
+    // Otherwise, store the new base currency in memory
+    _baseCurrency = newBaseCurrency;
+
+    // Important! Inform listeners a change has occurred.
+    notifyListeners();
+
+    // Persist the changes to a local database or the internet using the
+    // SettingService.
+    await settingsService.updateBaseCurrency(newBaseCurrency);
   }
 }

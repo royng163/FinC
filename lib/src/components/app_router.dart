@@ -1,4 +1,5 @@
 import 'package:finc/src/components/navbar.dart';
+import 'package:finc/src/pages/home/add_account_view.dart';
 import 'package:go_router/go_router.dart';
 import 'package:finc/src/pages/settings/signin_page.dart';
 import 'package:finc/src/models/user_model.dart';
@@ -24,6 +25,18 @@ class AppRouter {
         path: '/home',
         builder: (context, state) =>
             NavBar(settingsController: settingsController),
+        routes: [
+          GoRoute(
+            path: 'add-account',
+            builder: (context, state) =>
+                AddAccountView(settingsController: settingsController),
+          ),
+          GoRoute(
+            path: '/add-transaction',
+            builder: (context, state) =>
+                AddTransactionView(settingsController: settingsController),
+          ),
+        ],
       ),
       GoRoute(
         path: '/accounts',
@@ -33,10 +46,6 @@ class AppRouter {
         path: '/settings',
         builder: (context, state) =>
             SettingsPage(controller: settingsController),
-      ),
-      GoRoute(
-        path: '/add-transaction',
-        builder: (context, state) => AddTransactionView(),
       ),
     ],
   );

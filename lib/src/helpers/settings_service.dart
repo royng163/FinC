@@ -14,4 +14,13 @@ class SettingsService {
     // Use the shared_preferences package to persist settings locally or the
     // http package to persist settings over the network.
   }
+
+  /// Loads the User's preferred base currency from local or remote storage.
+  Future<String> baseCurrency() async => 'HKD';
+
+  /// Persists the user's preferred base currency to local or remote storage.
+  Future<void> updateBaseCurrency(String currency) async {
+    // Use the shared_preferences package to persist settings locally or the
+    // http package to persist settings over the network.
+  }
 }

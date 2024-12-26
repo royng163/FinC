@@ -5,6 +5,7 @@ class AccountModel {
   final String userId;
   final String accountName;
   final double balance;
+  final String currency;
   final Timestamp createdAt;
 
   AccountModel({
@@ -12,6 +13,7 @@ class AccountModel {
     required this.userId,
     required this.accountName,
     required this.balance,
+    required this.currency,
     required this.createdAt,
   });
 
@@ -22,6 +24,7 @@ class AccountModel {
       userId: data['userId'],
       accountName: data['accountName'],
       balance: data['balance'],
+      currency: data['currency'],
       createdAt: data['createdAt'],
     );
   }
@@ -31,6 +34,7 @@ class AccountModel {
       'userId': userId,
       'accountName': accountName,
       'balance': balance,
+      'currency': currency,
       'createdAt': createdAt,
     };
   }
