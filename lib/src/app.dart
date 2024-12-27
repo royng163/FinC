@@ -54,9 +54,13 @@ class MyAppState extends State<MyApp> {
       future: appRouter,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Scaffold(
-            body: Center(
-              child: const CircularProgressIndicator(),
+          return const Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: Text('Error: ${snapshot.error}'),
+              ),
             ),
           );
         } else if (snapshot.hasError) {

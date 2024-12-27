@@ -1,5 +1,8 @@
+import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_iconpicker/Models/configuration.dart';
+import 'package:flutter_iconpicker/flutter_iconpicker.dart';
 import '../../models/account_model.dart';
 import '../../helpers/firestore_service.dart';
 import 'package:flutter/services.dart';
@@ -20,6 +23,8 @@ class AddAccountViewState extends State<AddAccountView> {
   final TextEditingController accountNameController = TextEditingController();
   final TextEditingController balanceController = TextEditingController();
   final TextEditingController currencyController = TextEditingController();
+  Color selectedColor = Colors.grey;
+  IconData selectedIcon = Icons.wallet;
 
   late FirestoreService firestore;
 
@@ -54,6 +59,8 @@ class AddAccountViewState extends State<AddAccountView> {
         accountName: accountNameController.text,
         balance: double.parse(balanceController.text),
         currency: currencyController.text,
+        icon: selectedIcon.codePoint,
+        color: selectedColor.value,
         createdAt: Timestamp.now(),
       );
 
@@ -77,6 +84,57 @@ class AddAccountViewState extends State<AddAccountView> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to add account: $e')),
       );
+    }
+  }
+
+  void pickColor() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Pick a color'),
+          content: SingleChildScrollView(
+            child: ColorPicker(
+              color: selectedColor,
+              onColorChanged: (color) {
+                setState(() {
+                  selectedColor = color;
+                });
+              },
+              heading: Text(
+                'Select color',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              subheading: Text(
+                'Select color shade',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+            ),
+          ),
+          actions: [
+            ElevatedButton(
+              child: const Text('Select'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void pickIcon() async {
+    IconPickerIcon? icon = await showIconPicker(
+      context,
+      configuration: SinglePickerConfiguration(
+        iconPackModes: [IconPack.material],
+      ),
+    );
+    if (icon != null) {
+      setState(() {
+        selectedIcon = icon.data;
+      });
     }
   }
 
@@ -158,6 +216,28 @@ class AddAccountViewState extends State<AddAccountView> {
                     }
                     return null;
                   },
+                ),
+                Row(
+                  children: [
+                    ElevatedButton(
+                      onPressed: pickColor,
+                      child: const Text('Pick Color'),
+                    ),
+                    Container(
+                      width: 24,
+                      height: 24,
+                      color: selectedColor,
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    ElevatedButton(
+                      onPressed: pickIcon,
+                      child: const Text('Pick Icon'),
+                    ),
+                    Icon(selectedIcon, color: selectedColor),
+                  ],
                 ),
                 ElevatedButton(
                   onPressed: addAccount,

@@ -6,6 +6,8 @@ class AccountModel {
   final String accountName;
   final double balance;
   final String currency;
+  final int icon;
+  final int color;
   final Timestamp createdAt;
 
   AccountModel({
@@ -14,6 +16,8 @@ class AccountModel {
     required this.accountName,
     required this.balance,
     required this.currency,
+    required this.icon,
+    required this.color,
     required this.createdAt,
   });
 
@@ -25,6 +29,8 @@ class AccountModel {
       accountName: data['accountName'],
       balance: data['balance'],
       currency: data['currency'],
+      icon: data['icon'],
+      color: data['color'],
       createdAt: data['createdAt'],
     );
   }
@@ -35,6 +41,8 @@ class AccountModel {
       'accountName': accountName,
       'balance': balance,
       'currency': currency,
+      'icon': icon,
+      'color': color,
       'createdAt': createdAt,
     };
   }

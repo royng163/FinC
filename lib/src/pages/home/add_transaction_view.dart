@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/transaction_model.dart';
 import 'package:intl/intl.dart';
 import '../../helpers/firestore_service.dart';
@@ -21,22 +22,16 @@ class AddTransactionViewState extends State<AddTransactionView> {
   final List<String> type = [
     "Expense",
     "Income",
-    "Investment",
     "Transfer",
+    // "Investment",
     "Adjustment"
   ];
 
   String selectedAccount = "";
-  final List<String> accounts = ["Cash", "Alipay", "HSBC", "MMP Card"];
+  List<Map<String, dynamic>> accounts = [];
 
   String selectedCategory = "";
-  final List<String> categories = [
-    "Food",
-    "Transport",
-    "Entertainment",
-    "Shopping",
-    "Health",
-  ];
+  List<Map<String, dynamic>> categories = [];
 
   final TextEditingController transactionNameController =
       TextEditingController();
@@ -53,8 +48,48 @@ class AddTransactionViewState extends State<AddTransactionView> {
     super.initState();
     firestore = FirestoreService();
     currencyController.text = widget.settingsController.baseCurrency;
-    // Initialize the dateTimeController with the current date
-    transactionTimeController.text = DateTime.now().toString();
+    transactionTimeController.text =
+        DateFormat('yy-MM-dd HH:mm').format(DateTime.now());
+
+    fetchDataFromFirestore();
+  }
+
+  Future<void> fetchDataFromFirestore() async {
+    try {
+      final User? user = FirebaseAuth.instance.currentUser;
+      final accountsSnapshot = await firestore.db
+          .collection('Accounts')
+          .where('userId', isEqualTo: user?.uid)
+          .get();
+      final categoriesSnapshot = await firestore.db
+          .collection('Categories')
+          .where('userId', isEqualTo: user?.uid)
+          .get();
+
+      setState(() {
+        accounts = accountsSnapshot.docs
+            .map((doc) => {
+                  'accountId': doc.id,
+                  'accountName': doc['accountName'],
+                  'icon': IconData(doc['icon'], fontFamily: 'MaterialIcons'),
+                  'color': Color(doc['color']),
+                })
+            .toList();
+
+        categories = categoriesSnapshot.docs
+            .map((doc) => {
+                  'categoryId': doc.id,
+                  'categoryName': doc['categoryName'],
+                  'icon': IconData(doc['icon'], fontFamily: 'MaterialIcons'),
+                  'color': Color(doc['color']),
+                })
+            .toList();
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to fetch data: $e')),
+      );
+    }
   }
 
   @override
@@ -69,7 +104,12 @@ class AddTransactionViewState extends State<AddTransactionView> {
 
   void addTransaction() async {
     try {
-      final String userId = firestore.db.collection("Users").doc().id;
+      final User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('No user is currently signed in.');
+      }
+
+      final String userId = user.uid;
       final String transactionId =
           firestore.db.collection('Transactions').doc().id;
 
@@ -105,7 +145,7 @@ class AddTransactionViewState extends State<AddTransactionView> {
         selectedAccount = "";
         selectedCategory = "";
         transactionTimeController.text =
-            DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now());
+            DateFormat('yy-MM-dd HH:mm').format(DateTime.now());
       });
 
       // Optionally, navigate back or perform other actions
@@ -135,70 +175,88 @@ class AddTransactionViewState extends State<AddTransactionView> {
                     Text("Transaction Type"),
                   ],
                 ),
-                FormField(
-                  builder: (FormFieldState<dynamic> field) {
-                    return Row(
-                      spacing: 8,
-                      children: type
-                          .map((t) => ChoiceChip(
-                                label: Text(t),
-                                selected: selectedType == type.indexOf(t),
-                                onSelected: (bool selected) {
-                                  setState(() {
-                                    selectedType =
-                                        selected ? type.indexOf(t) : -1;
-                                  });
-                                },
-                              ))
-                          .toList(),
-                    );
-                  },
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: FormField(
+                    builder: (FormFieldState<dynamic> field) {
+                      return Wrap(
+                        alignment: WrapAlignment.start,
+                        spacing: 8,
+                        children: type
+                            .map((t) => ChoiceChip(
+                                  label: Text(t),
+                                  selected: selectedType == type.indexOf(t),
+                                  onSelected: (bool selected) {
+                                    setState(() {
+                                      selectedType =
+                                          selected ? type.indexOf(t) : -1;
+                                    });
+                                  },
+                                ))
+                            .toList(),
+                      );
+                    },
+                  ),
                 ),
                 Row(
                   children: [
                     Text("Account"),
                   ],
                 ),
-                FormField(
-                  builder: (FormFieldState<dynamic> field) {
-                    return Row(
-                      spacing: 8,
-                      children: accounts
-                          .map((a) => ChoiceChip(
-                                label: Text(a),
-                                selected: selectedAccount == a,
-                                onSelected: (bool selected) {
-                                  setState(() {
-                                    selectedAccount = selected ? a : "";
-                                  });
-                                },
-                              ))
-                          .toList(),
-                    );
-                  },
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: FormField(
+                    builder: (FormFieldState<dynamic> field) {
+                      return Wrap(
+                        alignment: WrapAlignment.start,
+                        spacing: 8,
+                        children: accounts
+                            .map((a) => ChoiceChip(
+                                  avatar: Icon(a['icon']),
+                                  backgroundColor: a['color'],
+                                  label: Text(a['accountName']),
+                                  selected: selectedAccount == a['accountId'],
+                                  onSelected: (bool selected) {
+                                    setState(() {
+                                      selectedAccount =
+                                          selected ? a['accountId'] : "";
+                                    });
+                                  },
+                                ))
+                            .toList(),
+                      );
+                    },
+                  ),
                 ),
                 Row(
                   children: [
                     Text("Category"),
                   ],
                 ),
-                FormField(
-                  builder: (FormFieldState<dynamic> field) {
-                    return Row(
-                      spacing: 8,
-                      children: categories
-                          .map((c) => ChoiceChip(
-                                label: Text(c),
-                                selected: selectedCategory == c,
-                                onSelected: (bool selected) {
-                                  setState(() {
-                                    selectedCategory = selected ? c : "";
-                                  });
-                                },
-                              ))
-                          .toList(),
-                    );
-                  },
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: FormField(
+                    builder: (FormFieldState<dynamic> field) {
+                      return Wrap(
+                        alignment: WrapAlignment.start,
+                        spacing: 8,
+                        children: categories
+                            .map((c) => ChoiceChip(
+                                  avatar: Icon(c['icon']),
+                                  backgroundColor: c['color'],
+                                  label: Text(c['categoryName']),
+                                  selected: selectedCategory == c['categoryId'],
+                                  onSelected: (bool selected) {
+                                    setState(() {
+                                      selectedCategory =
+                                          selected ? c['categoryId'] : "";
+                                    });
+                                  },
+                                ))
+                            .toList(),
+                      );
+                    },
+                  ),
                 ),
                 Row(
                   children: [
@@ -283,45 +341,93 @@ class AddTransactionViewState extends State<AddTransactionView> {
                     Text("Date & Time"),
                   ],
                 ),
-                TextFormField(
-                  controller: transactionTimeController,
-                  decoration: const InputDecoration(
-                    labelText: "Date & Time",
-                    border: OutlineInputBorder(),
-                    suffixIcon: Icon(Icons.calendar_today),
-                  ),
-                  readOnly: true,
-                  onTap: () async {
-                    DateTime? pickedDate = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime.now(),
-                    );
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: TextEditingController(
+                            text: DateFormat('yy-MM-dd').format(
+                                DateFormat('yy-MM-dd HH:mm')
+                                    .parse(transactionTimeController.text))),
+                        decoration: const InputDecoration(
+                          labelText: "Date",
+                          border: OutlineInputBorder(),
+                          suffixIcon: Icon(Icons.calendar_month),
+                        ),
+                        readOnly: true,
+                        onTap: () async {
+                          DateTime? pickedDate = await showDatePicker(
+                            context: context,
+                            initialDate: DateTime.now(),
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime.now(),
+                          );
 
-                    if (pickedDate != null) {
-                      TimeOfDay? pickedTime = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay.now(),
-                      );
+                          if (pickedDate != null) {
+                            final currentTime = DateFormat('HH:mm').parse(
+                                DateFormat('HH:mm').format(
+                                    DateFormat('yy-MM-dd HH:mm').parse(
+                                        transactionTimeController.text)));
 
-                      if (pickedTime != null) {
-                        final combinedDateTime = DateTime(
-                          pickedDate.year,
-                          pickedDate.month,
-                          pickedDate.day,
-                          pickedTime.hour,
-                          pickedTime.minute,
-                        );
+                            final combinedDateTime = DateTime(
+                              pickedDate.year,
+                              pickedDate.month,
+                              pickedDate.day,
+                              currentTime.hour,
+                              currentTime.minute,
+                            );
 
-                        setState(() {
-                          transactionTimeController.text =
-                              DateFormat('yy-MM-dd HH:mm')
-                                  .format(combinedDateTime);
-                        });
-                      }
-                    }
-                  },
+                            setState(() {
+                              transactionTimeController.text =
+                                  DateFormat('yy-MM-dd HH:mm')
+                                      .format(combinedDateTime);
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                    Expanded(
+                      child: TextFormField(
+                        controller: TextEditingController(
+                            text: DateFormat('HH:mm').format(
+                                DateFormat('yy-MM-dd HH:mm')
+                                    .parse(transactionTimeController.text))),
+                        decoration: const InputDecoration(
+                          labelText: "Time",
+                          border: OutlineInputBorder(),
+                          suffixIcon: Icon(Icons.access_time),
+                        ),
+                        readOnly: true,
+                        onTap: () async {
+                          TimeOfDay? pickedTime = await showTimePicker(
+                            context: context,
+                            initialTime: TimeOfDay.now(),
+                          );
+
+                          if (pickedTime != null) {
+                            final currentDate = DateFormat('yy-MM-dd').parse(
+                                DateFormat('yy-MM-dd').format(
+                                    DateFormat('yy-MM-dd HH:mm').parse(
+                                        transactionTimeController.text)));
+
+                            final combinedDateTime = DateTime(
+                              currentDate.year,
+                              currentDate.month,
+                              currentDate.day,
+                              pickedTime.hour,
+                              pickedTime.minute,
+                            );
+
+                            setState(() {
+                              transactionTimeController.text =
+                                  DateFormat('yy-MM-dd HH:mm')
+                                      .format(combinedDateTime);
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                  ],
                 ),
                 ElevatedButton(
                   onPressed: addTransaction,
