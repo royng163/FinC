@@ -85,7 +85,7 @@ class BalanceTab extends StatelessWidget {
             ),
             ElevatedButton(
               onPressed: () {
-                // Add your onPressed code here for adding a new category
+                context.go('/home/add-category');
               },
               child: const Text('Add Category'),
             ),

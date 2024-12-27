@@ -1,4 +1,3 @@
-import 'package:finc/src/pages/settings/settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:adaptive_navigation/adaptive_navigation.dart';
 import 'package:go_router/go_router.dart';
