@@ -13,7 +13,10 @@ class AppRouter {
   final UserModel? currentUser;
   final SettingsController settingsController;
 
-  AppRouter({this.currentUser, required this.settingsController});
+  AppRouter({
+    this.currentUser,
+    required this.settingsController,
+  });
 
   late final GoRouter router = GoRouter(
     initialLocation: currentUser == null ? '/signin' : '/home',
@@ -33,7 +36,7 @@ class AppRouter {
                 AddAccountView(settingsController: settingsController),
           ),
           GoRoute(
-            path: '/add-transaction',
+            path: 'add-transaction',
             builder: (context, state) =>
                 AddTransactionView(settingsController: settingsController),
           ),

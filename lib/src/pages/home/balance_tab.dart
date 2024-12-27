@@ -1,10 +1,187 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:finc/src/models/account_model.dart';
+import 'package:finc/src/models/category_model.dart';
+import 'package:finc/src/pages/home/transaction_details_view.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class BalanceTab extends StatelessWidget {
-  const BalanceTab({
-    super.key,
-  });
+import '../../models/transaction_model.dart';
+
+class BalanceTab extends StatefulWidget {
+  const BalanceTab({super.key});
+
+  @override
+  BalanceTabState createState() => BalanceTabState();
+}
+
+class BalanceTabState extends State<BalanceTab> {
+  double totalBalance = 0.0;
+  double totalIncome = 0.0;
+  double totalExpense = 0.0;
+  List<AccountModel> accounts = [];
+  List<TransactionModel> transactions = [];
+  Map<String, CategoryModel> categories = {};
+  bool isLoading = false;
+  bool hasMore = true;
+  DocumentSnapshot? lastDocument;
+  final int pageSize = 10;
+  final ScrollController scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    fetchTotalBalance();
+    fetchMonthlyTransactions();
+    fetchTransactions();
+    fetchCategories();
+    scrollController.addListener(() {
+      if (scrollController.position.pixels ==
+          scrollController.position.maxScrollExtent) {
+        fetchTransactions();
+      }
+    });
+  }
+
+  Future<void> fetchTotalBalance() async {
+    try {
+      final User? user = FirebaseAuth.instance.currentUser;
+      final accountsSnapshot = await FirebaseFirestore.instance
+          .collection('Accounts')
+          .where('userId', isEqualTo: user?.uid)
+          .get();
+
+      double balance = 0.0;
+      List<AccountModel> fetchedAccounts = accountsSnapshot.docs.map((doc) {
+        final account = AccountModel.fromDocument(doc);
+        balance += account.balance;
+        return account;
+      }).toList();
+
+      setState(() {
+        totalBalance = balance;
+        accounts = fetchedAccounts;
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to fetch total balance: $e')),
+      );
+    }
+  }
+
+  Future<void> fetchMonthlyTransactions() async {
+    try {
+      final User? user = FirebaseAuth.instance.currentUser;
+      final transactionsSnapshot = await FirebaseFirestore.instance
+          .collection('Transactions')
+          .where('userId', isEqualTo: user?.uid)
+          .get();
+
+      double income = 0.0;
+      double expense = 0.0;
+      final now = DateTime.now();
+      final currentMonth = DateTime(now.year, now.month, 1);
+
+      transactionsSnapshot.docs.forEach((doc) {
+        final transaction = TransactionModel.fromDocument(doc);
+        final transactionDate = transaction.transactionTime.toDate();
+
+        if (transactionDate.isAfter(currentMonth)) {
+          if (transaction.amount > 0) {
+            income += transaction.amount;
+          } else {
+            expense += transaction.amount;
+          }
+        }
+      });
+
+      setState(() {
+        totalIncome = income;
+        totalExpense = expense;
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to fetch transactions: $e')),
+      );
+    }
+  }
+
+  Future<void> fetchTransactions() async {
+    if (isLoading || !hasMore) return;
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final User? user = FirebaseAuth.instance.currentUser;
+      Query query = FirebaseFirestore.instance
+          .collection('Transactions')
+          .where('userId', isEqualTo: user?.uid)
+          .orderBy('transactionTime', descending: true)
+          .limit(pageSize);
+
+      if (lastDocument != null) {
+        query = query.startAfterDocument(lastDocument!);
+      }
+
+      final transactionsSnapshot = await query.get();
+
+      if (transactionsSnapshot.docs.isEmpty) {
+        setState(() {
+          hasMore = false;
+        });
+      } else {
+        lastDocument = transactionsSnapshot.docs.last;
+        List<TransactionModel> fetchedTransactions =
+            transactionsSnapshot.docs.map((doc) {
+          return TransactionModel.fromDocument(doc);
+        }).toList();
+
+        setState(() {
+          transactions.addAll(fetchedTransactions);
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to fetch transactions: $e')),
+      );
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> fetchCategories() async {
+    try {
+      final User? user = FirebaseAuth.instance.currentUser;
+      final categoriesSnapshot = await FirebaseFirestore.instance
+          .collection('Categories')
+          .where('userId', isEqualTo: user?.uid)
+          .get();
+
+      Map<String, CategoryModel> fetchedCategories = {};
+      categoriesSnapshot.docs.forEach((doc) {
+        final category = CategoryModel.fromDocument(doc);
+        fetchedCategories[category.categoryId] = category;
+      });
+
+      setState(() {
+        categories = fetchedCategories;
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to fetch categories: $e')),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,13 +203,10 @@ class BalanceTab extends StatelessWidget {
                       'Total Balance',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    // Text(
-                    //   transactions
-                    //       .map((t) => t.amount)
-                    //       .reduce((a, b) => a + b)
-                    //       .toStringAsFixed(2),
-                    //   style: const TextStyle(fontSize: 24),
-                    // ),
+                    Text(
+                      totalBalance.toStringAsFixed(2),
+                      style: const TextStyle(fontSize: 24),
+                    ),
                   ],
                 ),
                 Row(
@@ -44,13 +218,10 @@ class BalanceTab extends StatelessWidget {
                           'Income',
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        // Text(
-                        //   transactions
-                        //       .where((t) => t.amount > 0)
-                        //       .map((t) => t.amount)
-                        //       .reduce((a, b) => a + b)
-                        //       .toStringAsFixed(2),
-                        // ),
+                        Text(
+                          totalIncome.toStringAsFixed(2),
+                          style: const TextStyle(fontSize: 18),
+                        ),
                       ],
                     ),
                     Column(
@@ -59,13 +230,10 @@ class BalanceTab extends StatelessWidget {
                           'Expense',
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        // Text(
-                        //   transactions
-                        //       .where((t) => t.amount < 0)
-                        //       .map((t) => t.amount)
-                        //       .reduce((a, b) => a + b)
-                        //       .toStringAsFixed(2),
-                        // ),
+                        Text(
+                          totalExpense.toStringAsFixed(2),
+                          style: const TextStyle(fontSize: 18),
+                        ),
                       ],
                     ),
                   ],
@@ -97,27 +265,41 @@ class BalanceTab extends StatelessWidget {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ],
         ),
-        // Expanded(
-        //   child: ListView.builder(
-        //     itemCount: transactions.length,
-        //     itemBuilder: (BuildContext context, int index) {
-        //       return ListTile(
-        //         leading: const Icon(Icons.money),
-        //         title: Text(transactions[index].name),
-        //         subtitle: Text(transactions[index].account),
-        //         trailing: Text(
-        //             '${transactions[index].amount} ${transactions[index].currency}',
-        //             style: TextStyle(fontSize: 18)),
-        //         onTap: () {
-        //           Navigator.push(
-        //               context,
-        //               MaterialPageRoute(
-        //                   builder: (context) => TransactionDetailsView()));
-        //         },
-        //       );
-        //     },
-        //   ),
-        // ),
+        Expanded(
+          child: ListView.builder(
+            controller: scrollController,
+            itemCount: transactions.length + (hasMore ? 1 : 0),
+            itemBuilder: (BuildContext context, int index) {
+              if (index == transactions.length) {
+                return isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : const SizedBox.shrink();
+              }
+              final transaction = transactions[index];
+              final category = categories[transaction.categoryId];
+              return ListTile(
+                leading: category != null
+                    ? Icon(IconData(category.icon, fontFamily: 'MaterialIcons'),
+                        color: Color(category.color))
+                    : const Icon(Icons.category, color: Colors.grey),
+                title: Text(transaction.transactionName),
+                trailing: Text(
+                  '${transaction.amount} ${transaction.currency}',
+                  style: const TextStyle(fontSize: 18),
+                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          EditTransactionView(transaction: transaction),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
       ],
     );
   }
