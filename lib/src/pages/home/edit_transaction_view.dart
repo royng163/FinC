@@ -7,16 +7,13 @@ import '../../models/account_model.dart';
 import '../../helpers/firestore_service.dart';
 import 'package:flutter/services.dart';
 import 'package:currency_picker/currency_picker.dart';
-import '../../components/settings_controller.dart';
 
 class EditTransactionView extends StatefulWidget {
   final TransactionModel transaction;
-  final SettingsController settingsController;
 
   const EditTransactionView({
     super.key,
     required this.transaction,
-    required this.settingsController,
   });
 
   @override
@@ -24,16 +21,18 @@ class EditTransactionView extends StatefulWidget {
 }
 
 class EditTransactionViewState extends State<EditTransactionView> {
-  final TextEditingController transactionNameController = TextEditingController();
+  final TextEditingController transactionNameController =
+      TextEditingController();
   final TextEditingController amountController = TextEditingController();
   final TextEditingController currencyController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
-  final TextEditingController transactionTimeController = TextEditingController();
+  final TextEditingController transactionTimeController =
+      TextEditingController();
 
   late FirestoreService firestore;
   late String selectedAccount;
-  late String selectedCategory;
-  late int selectedType;
+  late List<String> selectedTags;
+  late TransactionType selectedType;
 
   @override
   void initState() {
@@ -43,10 +42,11 @@ class EditTransactionViewState extends State<EditTransactionView> {
     amountController.text = widget.transaction.amount.toString();
     currencyController.text = widget.transaction.currency;
     descriptionController.text = widget.transaction.description;
-    transactionTimeController.text = DateFormat('yy-MM-dd HH:mm').format(widget.transaction.transactionTime.toDate());
+    transactionTimeController.text = DateFormat('yy-MM-dd HH:mm')
+        .format(widget.transaction.transactionTime.toDate());
     selectedAccount = widget.transaction.accountId;
-    selectedCategory = widget.transaction.categoryId;
-    selectedType = widget.transaction.transactionType == 'Income' ? 1 : 0;
+    selectedTags = widget.transaction.tags;
+    selectedType = widget.transaction.transactionType;
   }
 
   @override
@@ -71,16 +71,16 @@ class EditTransactionViewState extends State<EditTransactionView> {
           .collection('Transactions')
           .doc(widget.transaction.transactionId)
           .get();
-      final originalTransaction = TransactionModel.fromDocument(originalTransactionDoc);
+      final originalTransaction =
+          TransactionModel.fromDocument(originalTransactionDoc);
 
       // Calculate the difference in amount
-      final double amountDifference = double.parse(amountController.text) - originalTransaction.amount;
+      final double amountDifference =
+          double.parse(amountController.text) - originalTransaction.amount;
 
       // Fetch the corresponding account
-      final accountDoc = await firestore.db
-          .collection('Accounts')
-          .doc(selectedAccount)
-          .get();
+      final accountDoc =
+          await firestore.db.collection('Accounts').doc(selectedAccount).get();
       final account = AccountModel.fromDocument(accountDoc);
 
       // Update the account balance
@@ -95,14 +95,14 @@ class EditTransactionViewState extends State<EditTransactionView> {
         transactionId: widget.transaction.transactionId,
         userId: user.uid,
         accountId: selectedAccount,
-        categoryId: selectedCategory,
+        tags: selectedTags,
         transactionName: transactionNameController.text,
         amount: double.parse(amountController.text),
         currency: currencyController.text,
         description: descriptionController.text,
-        transactionType: selectedType == 1 ? 'Income' : 'Expense',
-        transactionTime: Timestamp.fromDate(
-            DateFormat('yyyy-MM-dd HH:mm').parse(transactionTimeController.text)),
+        transactionType: selectedType,
+        transactionTime: Timestamp.fromDate(DateFormat('yyyy-MM-dd HH:mm')
+            .parse(transactionTimeController.text)),
       );
 
       await firestore.db
@@ -157,8 +157,7 @@ class EditTransactionViewState extends State<EditTransactionView> {
                 keyboardType: TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
                   // Allow only numbers and decimal point, and limit to two decimal places
-                  FilteringTextInputFormatter.allow(
-                      RegExp(r'^\d+\.?\d{0,2}')),
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
                 ],
                 validator: (value) {
                   if (value == null || value.isEmpty) {

@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:finc/src/models/account_model.dart';
-import 'package:finc/src/models/category_model.dart';
-import 'package:finc/src/pages/home/transaction_details_view.dart';
+import 'package:finc/src/models/tag_model.dart';
+import 'package:finc/src/pages/home/edit_transaction_view.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -21,7 +21,7 @@ class BalanceTabState extends State<BalanceTab> {
   double totalExpense = 0.0;
   List<AccountModel> accounts = [];
   List<TransactionModel> transactions = [];
-  Map<String, CategoryModel> categories = {};
+  Map<String, TagModel> tags = {};
   bool isLoading = false;
   bool hasMore = true;
   DocumentSnapshot? lastDocument;
@@ -34,7 +34,7 @@ class BalanceTabState extends State<BalanceTab> {
     fetchTotalBalance();
     fetchMonthlyTransactions();
     fetchTransactions();
-    fetchCategories();
+    fetchTags();
     scrollController.addListener(() {
       if (scrollController.position.pixels ==
           scrollController.position.maxScrollExtent) {
@@ -153,26 +153,26 @@ class BalanceTabState extends State<BalanceTab> {
     }
   }
 
-  Future<void> fetchCategories() async {
+  Future<void> fetchTags() async {
     try {
       final User? user = FirebaseAuth.instance.currentUser;
-      final categoriesSnapshot = await FirebaseFirestore.instance
-          .collection('Categories')
+      final tagsSnapshot = await FirebaseFirestore.instance
+          .collection('Tags')
           .where('userId', isEqualTo: user?.uid)
           .get();
 
-      Map<String, CategoryModel> fetchedCategories = {};
-      categoriesSnapshot.docs.forEach((doc) {
-        final category = CategoryModel.fromDocument(doc);
-        fetchedCategories[category.categoryId] = category;
+      Map<String, TagModel> fetchedTags = {};
+      tagsSnapshot.docs.forEach((doc) {
+        final tag = TagModel.fromDocument(doc);
+        fetchedTags[tag.tagId] = tag;
       });
 
       setState(() {
-        categories = fetchedCategories;
+        tags = fetchedTags;
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to fetch categories: $e')),
+        SnackBar(content: Text('Failed to fetch tags: $e')),
       );
     }
   }
@@ -253,9 +253,9 @@ class BalanceTabState extends State<BalanceTab> {
             ),
             ElevatedButton(
               onPressed: () {
-                context.go('/home/add-category');
+                context.go('/home/add-tag');
               },
-              child: const Text('Add Category'),
+              child: const Text('Add Tag'),
             ),
           ],
         ),
@@ -276,13 +276,27 @@ class BalanceTabState extends State<BalanceTab> {
                     : const SizedBox.shrink();
               }
               final transaction = transactions[index];
-              final category = categories[transaction.categoryId];
+              final transactionTags = transaction.tags
+                  .map((tagId) => tags[tagId])
+                  .where((tag) => tag != null)
+                  .toList();
               return ListTile(
-                leading: category != null
-                    ? Icon(IconData(category.icon, fontFamily: 'MaterialIcons'),
-                        color: Color(category.color))
-                    : const Icon(Icons.category, color: Colors.grey),
                 title: Text(transaction.transactionName),
+                subtitle: Wrap(
+                  spacing: 6.0,
+                  runSpacing: 6.0,
+                  children: transactionTags
+                      .map((tag) => Chip(
+                            label: Text(tag!.tagName),
+                            avatar: Icon(
+                              IconData(tag.icon, fontFamily: 'MaterialIcons'),
+                              size: 16,
+                              color: Color(tag.color),
+                            ),
+                            backgroundColor: Color(tag.color).withOpacity(0.2),
+                          ))
+                      .toList(),
+                ),
                 trailing: Text(
                   '${transaction.amount} ${transaction.currency}',
                   style: const TextStyle(fontSize: 18),

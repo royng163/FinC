@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../models/account_model.dart';
 import '../models/transaction_model.dart';
-import '../models/category_model.dart';
+import '../models/tag_model.dart';
 
 class FirestoreService {
   final FirebaseFirestore db = FirebaseFirestore.instance;
@@ -43,16 +43,13 @@ class FirestoreService {
     return TransactionModel.fromDocument(doc);
   }
 
-  // Category Collection
-  Future<void> createCategory(CategoryModel category) {
-    return db
-        .collection('Categories')
-        .doc(category.categoryId)
-        .set(category.toMap());
+  // Tag Collection
+  Future<void> createTag(TagModel tag) {
+    return db.collection('Tags').doc(tag.tagId).set(tag.toMap());
   }
 
-  Future<CategoryModel> getCategory(String categoryId) async {
-    final doc = await db.collection('Categories').doc(categoryId).get();
-    return CategoryModel.fromDocument(doc);
+  Future<TagModel> getTag(String tagId) async {
+    final doc = await db.collection('Tags').doc(tagId).get();
+    return TagModel.fromDocument(doc);
   }
 }

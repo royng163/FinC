@@ -18,20 +18,12 @@ class AddTransactionView extends StatefulWidget {
 }
 
 class AddTransactionViewState extends State<AddTransactionView> {
-  int selectedType = 0;
-  final List<String> type = [
-    "Expense",
-    "Income",
-    "Transfer",
-    // "Investment",
-    "Adjustment"
-  ];
-
+  TransactionType selectedTransactionType = TransactionType.expense;
   String selectedAccount = "";
   List<Map<String, dynamic>> accounts = [];
 
-  String selectedCategory = "";
-  List<Map<String, dynamic>> categories = [];
+  List<String> selectedTags = [];
+  List<Map<String, dynamic>> tags = [];
 
   final TextEditingController transactionNameController =
       TextEditingController();
@@ -61,25 +53,25 @@ class AddTransactionViewState extends State<AddTransactionView> {
           .collection('Accounts')
           .where('userId', isEqualTo: user?.uid)
           .get();
-      final categoriesSnapshot = await firestore.db
-          .collection('Categories')
+      final tagsSnapshot = await firestore.db
+          .collection('Tags')
           .where('userId', isEqualTo: user?.uid)
           .get();
 
       setState(() {
-        accounts = accountsSnapshot.docs
+        tags = tagsSnapshot.docs
             .map((doc) => {
-                  'accountId': doc.id,
-                  'accountName': doc['accountName'],
+                  'tagId': doc.id,
+                  'tagName': doc['tagName'],
                   'icon': IconData(doc['icon'], fontFamily: 'MaterialIcons'),
                   'color': Color(doc['color']),
                 })
             .toList();
-
-        categories = categoriesSnapshot.docs
+        accounts = accountsSnapshot.docs
             .map((doc) => {
-                  'categoryId': doc.id,
-                  'categoryName': doc['categoryName'],
+                  'accountId': doc.id,
+                  'accountName': doc['accountName'],
+                  'balance': doc['balance'],
                   'icon': IconData(doc['icon'], fontFamily: 'MaterialIcons'),
                   'color': Color(doc['color']),
                 })
@@ -112,22 +104,31 @@ class AddTransactionViewState extends State<AddTransactionView> {
       final String userId = user.uid;
       final String transactionId =
           firestore.db.collection('Transactions').doc().id;
+      final double amount = double.parse(amountController.text);
 
       final TransactionModel transaction = TransactionModel(
         transactionId: transactionId,
         userId: userId,
-        accountId: selectedAccount, // Replace with actual account ID
-        categoryId: selectedCategory, // Replace with actual category ID
+        accountId: selectedAccount,
+        tags: selectedTags,
         transactionName: transactionNameController.text,
-        amount: double.parse(amountController.text),
+        amount: amount,
         currency: currencyController.text,
         description: descriptionController.text,
-        transactionType: type[selectedType],
+        transactionType: selectedTransactionType,
         transactionTime: Timestamp.fromDate(
             DateFormat('yy-MM-dd HH:mm').parse(transactionTimeController.text)),
       );
 
       await firestore.createTransaction(transaction);
+
+      // Update the account balance
+      final account =
+          accounts.firstWhere((a) => a['accountId'] == selectedAccount);
+      await FirebaseFirestore.instance
+          .collection('Accounts')
+          .doc(selectedAccount)
+          .update({'balance': account['balance'] + amount});
 
       if (!mounted) return;
 
@@ -141,15 +142,14 @@ class AddTransactionViewState extends State<AddTransactionView> {
       amountController.clear();
       descriptionController.clear();
       setState(() {
-        selectedType = 0;
+        selectedTransactionType = TransactionType.expense;
         selectedAccount = "";
-        selectedCategory = "";
+        selectedTags = [];
         transactionTimeController.text =
             DateFormat('yy-MM-dd HH:mm').format(DateTime.now());
       });
 
-      // Optionally, navigate back or perform other actions
-      // Navigator.pop(context);
+      Navigator.pop(context);
     } catch (e) {
       // Handle errors gracefully
       ScaffoldMessenger.of(context).showSnackBar(
@@ -170,34 +170,6 @@ class AddTransactionViewState extends State<AddTransactionView> {
             child: Column(
               spacing: 8,
               children: [
-                Row(
-                  children: [
-                    Text("Transaction Type"),
-                  ],
-                ),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: FormField(
-                    builder: (FormFieldState<dynamic> field) {
-                      return Wrap(
-                        alignment: WrapAlignment.start,
-                        spacing: 8,
-                        children: type
-                            .map((t) => ChoiceChip(
-                                  label: Text(t),
-                                  selected: selectedType == type.indexOf(t),
-                                  onSelected: (bool selected) {
-                                    setState(() {
-                                      selectedType =
-                                          selected ? type.indexOf(t) : -1;
-                                    });
-                                  },
-                                ))
-                            .toList(),
-                      );
-                    },
-                  ),
-                ),
                 Row(
                   children: [
                     Text("Account"),
@@ -230,7 +202,7 @@ class AddTransactionViewState extends State<AddTransactionView> {
                 ),
                 Row(
                   children: [
-                    Text("Category"),
+                    Text("Transaction Type"),
                   ],
                 ),
                 SingleChildScrollView(
@@ -240,16 +212,58 @@ class AddTransactionViewState extends State<AddTransactionView> {
                       return Wrap(
                         alignment: WrapAlignment.start,
                         spacing: 8,
-                        children: categories
+                        children: TransactionType.values
+                            .map((t) => ChoiceChip(
+                                  label: Text(t
+                                          .toString()
+                                          .split('.')
+                                          .last[0]
+                                          .toUpperCase() +
+                                      t
+                                          .toString()
+                                          .split('.')
+                                          .last
+                                          .substring(1)
+                                          .toLowerCase()),
+                                  selected: selectedTransactionType == t,
+                                  onSelected: (bool selected) {
+                                    setState(() {
+                                      selectedTransactionType = selected
+                                          ? t
+                                          : TransactionType.expense;
+                                    });
+                                  },
+                                ))
+                            .toList(),
+                      );
+                    },
+                  ),
+                ),
+                Row(
+                  children: [
+                    Text("Tags"),
+                  ],
+                ),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: FormField(
+                    builder: (FormFieldState<dynamic> field) {
+                      return Wrap(
+                        alignment: WrapAlignment.start,
+                        spacing: 8,
+                        children: tags
                             .map((c) => ChoiceChip(
                                   avatar: Icon(c['icon']),
                                   backgroundColor: c['color'],
-                                  label: Text(c['categoryName']),
-                                  selected: selectedCategory == c['categoryId'],
+                                  label: Text(c['tagName']),
+                                  selected: selectedTags.contains(c['tagId']),
                                   onSelected: (bool selected) {
                                     setState(() {
-                                      selectedCategory =
-                                          selected ? c['categoryId'] : "";
+                                      if (selected) {
+                                        selectedTags.add(c['tagId']);
+                                      } else {
+                                        selectedTags.remove(c['tagId']);
+                                      }
                                     });
                                   },
                                 ))

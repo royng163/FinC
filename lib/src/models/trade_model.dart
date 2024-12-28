@@ -3,20 +3,18 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class TradeModel {
   final String tradeId;
   final String userId;
-  final String instructmentName;
-  final bool isPurchase;
-  final double quantity;
-  final double cost;
+  final String symbol;
+  final double position;
+  final double value;
   final String currency;
   final Timestamp tradeTime;
 
   TradeModel({
     required this.tradeId,
     required this.userId,
-    required this.instructmentName,
-    required this.isPurchase,
-    required this.quantity,
-    required this.cost,
+    required this.symbol,
+    required this.position,
+    required this.value,
     required this.currency,
     required this.tradeTime,
   });
@@ -26,10 +24,9 @@ class TradeModel {
     return TradeModel(
       tradeId: doc.id,
       userId: data['userId'],
-      instructmentName: data['instructmentName'],
-      isPurchase: data['isPurchase'],
-      quantity: data['quantity'],
-      cost: data['cost'],
+      symbol: data['instructmentName'],
+      position: data['quantity'],
+      value: data['cost'],
       currency: data['currency'],
       tradeTime: data['tradeTime'],
     );
@@ -38,10 +35,9 @@ class TradeModel {
   Map<String, dynamic> toMap() {
     return {
       'userId': userId,
-      'instructmentName': instructmentName,
-      'isPurchase': isPurchase,
-      'quantity': quantity,
-      'cost': cost,
+      'instructmentName': symbol,
+      'quantity': position,
+      'cost': value,
       'currency': currency,
       'tradeTime': tradeTime,
     };

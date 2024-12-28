@@ -1,6 +1,6 @@
 import 'package:finc/src/components/navbar.dart';
 import 'package:finc/src/pages/home/add_account_view.dart';
-import 'package:finc/src/pages/home/add_category_view.dart';
+import 'package:finc/src/pages/home/add_tag_view.dart';
 import 'package:go_router/go_router.dart';
 import 'package:finc/src/pages/settings/signin_page.dart';
 import 'package:finc/src/models/user_model.dart';
@@ -41,8 +41,8 @@ class AppRouter {
                 AddTransactionView(settingsController: settingsController),
           ),
           GoRoute(
-            path: 'add-category',
-            builder: (context, state) => AddCategoryView(),
+            path: 'add-tag',
+            builder: (context, state) => AddTagView(),
           ),
         ],
       ),

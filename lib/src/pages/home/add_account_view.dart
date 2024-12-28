@@ -25,6 +25,7 @@ class AddAccountViewState extends State<AddAccountView> {
   final TextEditingController currencyController = TextEditingController();
   Color selectedColor = Colors.grey;
   IconData selectedIcon = Icons.wallet;
+  AccountType selectedAccountType = AccountType.bank;
 
   late FirestoreService firestore;
 
@@ -56,6 +57,7 @@ class AddAccountViewState extends State<AddAccountView> {
       final AccountModel account = AccountModel(
         accountId: accountId,
         userId: userId,
+        accountType: selectedAccountType,
         accountName: accountNameController.text,
         balance: double.parse(balanceController.text),
         currency: currencyController.text,
@@ -76,9 +78,14 @@ class AddAccountViewState extends State<AddAccountView> {
       // Clear the form
       accountNameController.clear();
       balanceController.clear();
+      currencyController.clear();
+      setState(() {
+        selectedColor = Colors.grey;
+        selectedIcon = Icons.wallet;
+        selectedAccountType = AccountType.bank;
+      });
 
-      // Optionally, navigate back or perform other actions
-      // Navigator.pop(context);
+      Navigator.pop(context);
     } catch (e) {
       // Handle errors gracefully
       ScaffoldMessenger.of(context).showSnackBar(
@@ -150,6 +157,24 @@ class AddAccountViewState extends State<AddAccountView> {
             child: Column(
               spacing: 8,
               children: [
+                Wrap(
+                  spacing: 8.0,
+                  children: AccountType.values.map((AccountType type) {
+                    return ChoiceChip(
+                      label: Text(
+                          type.toString().split('.').last[0].toUpperCase() +
+                              type.toString().split('.').last.substring(1)),
+                      selected: selectedAccountType == type,
+                      onSelected: (bool selected) {
+                        setState(() {
+                          if (selected) {
+                            selectedAccountType = type;
+                          }
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
                 TextFormField(
                   controller: accountNameController,
                   decoration: const InputDecoration(

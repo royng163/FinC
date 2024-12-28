@@ -3,21 +3,21 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter_iconpicker/Models/configuration.dart';
 import 'package:flutter_iconpicker/flutter_iconpicker.dart';
-import '../../models/category_model.dart';
+import '../../models/tag_model.dart';
 import '../../helpers/firestore_service.dart';
 
-class AddCategoryView extends StatefulWidget {
-  const AddCategoryView({super.key});
+class AddTagView extends StatefulWidget {
+  const AddTagView({super.key});
 
   @override
-  AddCategoryViewState createState() => AddCategoryViewState();
+  AddTagViewState createState() => AddTagViewState();
 }
 
-class AddCategoryViewState extends State<AddCategoryView> {
-  final TextEditingController categoryNameController = TextEditingController();
+class AddTagViewState extends State<AddTagView> {
+  final TextEditingController tagNameController = TextEditingController();
   Color selectedColor = Colors.grey;
   IconData selectedIcon = Icons.category;
-  String selectedTransactionType = 'Expense';
+  TagType selectedTagType = TagType.categories;
 
   late FirestoreService firestore;
 
@@ -29,7 +29,7 @@ class AddCategoryViewState extends State<AddCategoryView> {
 
   @override
   void dispose() {
-    categoryNameController.dispose();
+    tagNameController.dispose();
     super.dispose();
   }
 
@@ -43,16 +43,16 @@ class AddCategoryViewState extends State<AddCategoryView> {
       final String userId = user.uid;
       final String categoryId = firestore.db.collection('Categories').doc().id;
 
-      final CategoryModel category = CategoryModel(
-        categoryId: categoryId,
+      final TagModel category = TagModel(
+        tagId: categoryId,
         userId: userId,
-        categoryName: categoryNameController.text,
-        transactionType: selectedTransactionType,
+        tagName: tagNameController.text,
+        tagType: selectedTagType,
         icon: selectedIcon.codePoint,
         color: selectedColor.value,
       );
 
-      await firestore.createCategory(category);
+      await firestore.createTag(category);
 
       if (!mounted) return;
 
@@ -62,15 +62,14 @@ class AddCategoryViewState extends State<AddCategoryView> {
       );
 
       // Clear the form
-      categoryNameController.clear();
+      tagNameController.clear();
       setState(() {
-        selectedTransactionType = 'Expense';
+        selectedTagType = TagType.categories;
         selectedColor = Colors.grey;
         selectedIcon = Icons.category;
       });
 
-      // Optionally, navigate back or perform other actions
-      // Navigator.pop(context);
+      Navigator.pop(context);
     } catch (e) {
       // Handle errors gracefully
       ScaffoldMessenger.of(context).showSnackBar(
@@ -134,7 +133,7 @@ class AddCategoryViewState extends State<AddCategoryView> {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: const Text('New Category'),
+          title: const Text('New Tag'),
         ),
         body: Padding(
           padding: const EdgeInsets.all(10),
@@ -142,10 +141,33 @@ class AddCategoryViewState extends State<AddCategoryView> {
             child: Column(
               spacing: 8,
               children: [
+                Wrap(
+                  spacing: 8.0,
+                  children: [
+                    ChoiceChip(
+                      label: const Text('Category'),
+                      selected: selectedTagType == TagType.categories,
+                      onSelected: (selected) {
+                        setState(() {
+                          selectedTagType = TagType.categories;
+                        });
+                      },
+                    ),
+                    ChoiceChip(
+                      label: const Text('Method'),
+                      selected: selectedTagType == TagType.methods,
+                      onSelected: (selected) {
+                        setState(() {
+                          selectedTagType = TagType.methods;
+                        });
+                      },
+                    ),
+                  ],
+                ),
                 TextFormField(
-                  controller: categoryNameController,
+                  controller: tagNameController,
                   decoration: const InputDecoration(
-                      labelText: "Category Name",
+                      labelText: "Tag Name",
                       hintText: "e.g. Groceries",
                       border: OutlineInputBorder()),
                   keyboardType: TextInputType.text,
@@ -177,34 +199,6 @@ class AddCategoryViewState extends State<AddCategoryView> {
                     ),
                     Icon(selectedIcon, color: selectedColor),
                   ],
-                ),
-                DropdownButtonFormField<String>(
-                  value: selectedTransactionType,
-                  decoration: const InputDecoration(
-                    labelText: "Transaction Type",
-                    border: OutlineInputBorder(),
-                  ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'Income',
-                      child: Text('Income'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'Expense',
-                      child: Text('Expense'),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      selectedTransactionType = value!;
-                    });
-                  },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please select a transaction type';
-                    }
-                    return null;
-                  },
                 ),
                 ElevatedButton(
                   onPressed: addCategory,

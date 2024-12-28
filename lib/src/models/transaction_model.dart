@@ -1,22 +1,24 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+enum TransactionType { expense, income, transfer, adjustment }
+
 class TransactionModel {
   final String transactionId;
   final String userId;
   final String accountId;
-  final String categoryId;
+  final List<String> tags;
   final String transactionName;
   final double amount;
   final String currency;
   final String description;
-  final String transactionType;
+  final TransactionType transactionType;
   final Timestamp transactionTime;
 
   TransactionModel({
     required this.transactionId,
     required this.userId,
     required this.accountId,
-    required this.categoryId,
+    required this.tags,
     required this.transactionName,
     required this.amount,
     required this.currency,
@@ -31,12 +33,12 @@ class TransactionModel {
       transactionId: doc.id,
       userId: data['userId'],
       accountId: data['accountId'],
-      categoryId: data['categoryId'],
+      tags: List<String>.from(data['tags']),
       transactionName: data['transactionName'],
       amount: data['amount'],
       currency: data['currency'],
       description: data['description'],
-      transactionType: data['transactionType'],
+      transactionType: TransactionType.values[data['transactionType']],
       transactionTime: data['transactionTime'],
     );
   }
@@ -45,12 +47,12 @@ class TransactionModel {
     return {
       'userId': userId,
       'accountId': accountId,
-      'categoryId': categoryId,
+      'tags': tags,
       'transactionName': transactionName,
       'amount': amount,
       'currency': currency,
       'description': description,
-      'transactionType': transactionType,
+      'transactionType': transactionType.index,
       'transactionTime': transactionTime,
     };
   }

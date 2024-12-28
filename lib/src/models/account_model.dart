@@ -1,8 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+enum AccountType { bank, securities }
+
 class AccountModel {
   final String accountId;
   final String userId;
+  final AccountType accountType;
   final String accountName;
   final double balance;
   final String currency;
@@ -13,6 +16,7 @@ class AccountModel {
   AccountModel({
     required this.accountId,
     required this.userId,
+    required this.accountType,
     required this.accountName,
     required this.balance,
     required this.currency,
@@ -26,6 +30,7 @@ class AccountModel {
     return AccountModel(
       accountId: doc.id,
       userId: data['userId'],
+      accountType: AccountType.values[data['accountType']],
       accountName: data['accountName'],
       balance: data['balance'],
       currency: data['currency'],
@@ -38,6 +43,7 @@ class AccountModel {
   Map<String, dynamic> toMap() {
     return {
       'userId': userId,
+      'accountType': accountType.index,
       'accountName': accountName,
       'balance': balance,
       'currency': currency,
