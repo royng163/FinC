@@ -21,8 +21,8 @@ class AddAccountView extends StatefulWidget {
 
 class AddAccountViewState extends State<AddAccountView> {
   final TextEditingController accountNameController = TextEditingController();
-  final TextEditingController balanceController = TextEditingController();
-  final TextEditingController currencyController = TextEditingController();
+  final List<TextEditingController> balanceControllers = [];
+  final List<TextEditingController> currencyControllers = [];
   Color selectedColor = Colors.grey;
   IconData selectedIcon = Icons.wallet;
   AccountType selectedAccountType = AccountType.bank;
@@ -33,15 +33,37 @@ class AddAccountViewState extends State<AddAccountView> {
   void initState() {
     super.initState();
     firestore = FirestoreService();
-    currencyController.text = widget.settingsController.baseCurrency;
+    addCurrencyField(widget.settingsController.baseCurrency, '0.0');
   }
 
   @override
   void dispose() {
     accountNameController.dispose();
-    balanceController.dispose();
-    currencyController.dispose();
+    for (var controller in balanceControllers) {
+      controller.dispose();
+    }
+    for (var controller in currencyControllers) {
+      controller.dispose();
+    }
     super.dispose();
+  }
+
+  void addCurrencyField(String currency, String balance) {
+    final currencyController = TextEditingController(text: currency);
+    final balanceController = TextEditingController(text: balance);
+    setState(() {
+      currencyControllers.add(currencyController);
+      balanceControllers.add(balanceController);
+    });
+  }
+
+  void removeCurrencyField(int index) {
+    setState(() {
+      currencyControllers[index].dispose();
+      balanceControllers[index].dispose();
+      currencyControllers.removeAt(index);
+      balanceControllers.removeAt(index);
+    });
   }
 
   void addAccount() async {
@@ -54,13 +76,19 @@ class AddAccountViewState extends State<AddAccountView> {
       final String userId = user.uid;
       final String accountId = firestore.db.collection('Accounts').doc().id;
 
+      final Map<String, double> balances = {};
+      for (int i = 0; i < currencyControllers.length; i++) {
+        final currency = currencyControllers[i].text;
+        final balance = double.parse(balanceControllers[i].text);
+        balances[currency] = balance;
+      }
+
       final AccountModel account = AccountModel(
         accountId: accountId,
         userId: userId,
         accountType: selectedAccountType,
         accountName: accountNameController.text,
-        balance: double.parse(balanceController.text),
-        currency: currencyController.text,
+        balances: balances,
         icon: selectedIcon.codePoint,
         color: selectedColor.value,
         createdAt: Timestamp.now(),
@@ -77,8 +105,12 @@ class AddAccountViewState extends State<AddAccountView> {
 
       // Clear the form
       accountNameController.clear();
-      balanceController.clear();
-      currencyController.clear();
+      for (var controller in balanceControllers) {
+        controller.clear();
+      }
+      for (var controller in currencyControllers) {
+        controller.clear();
+      }
       setState(() {
         selectedColor = Colors.grey;
         selectedIcon = Icons.wallet;
@@ -189,58 +221,84 @@ class AddAccountViewState extends State<AddAccountView> {
                     return null;
                   },
                 ),
-                TextFormField(
-                  controller: balanceController,
-                  decoration: const InputDecoration(
-                      labelText: "Balance",
-                      hintText: "e.g. 1000.0",
-                      border: OutlineInputBorder()),
-                  keyboardType: TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [
-                    // Allow only numbers and decimal point, and limit to two decimal places
-                    FilteringTextInputFormatter.allow(
-                        RegExp(r'^\d+\.?\d{0,2}')),
-                  ],
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a balance';
-                    }
-                    if (double.tryParse(value) == null) {
-                      return 'Please enter a valid number';
-                    }
-                    final parts = value.split('.');
-                    if (parts.length == 2 && parts[1].length > 2) {
-                      return 'Balance cannot have more than two decimal places';
-                    }
-                    return null;
-                  },
-                ),
-                TextFormField(
-                  controller: currencyController,
-                  readOnly: true,
-                  decoration: const InputDecoration(
-                    labelText: "Currency",
-                    border: OutlineInputBorder(),
-                  ),
-                  onTap: () {
-                    showCurrencyPicker(
-                      context: context,
-                      showFlag: true,
-                      showCurrencyName: true,
-                      showCurrencyCode: true,
-                      onSelect: (Currency currency) {
-                        setState(() {
-                          currencyController.text = currency.code;
-                        });
-                      },
+                ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: currencyControllers.length,
+                  itemBuilder: (context, index) {
+                    return Row(
+                      spacing: 8,
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: currencyControllers[index],
+                            readOnly: true,
+                            decoration: const InputDecoration(
+                              labelText: "Currency",
+                              border: OutlineInputBorder(),
+                            ),
+                            onTap: () {
+                              showCurrencyPicker(
+                                context: context,
+                                onSelect: (Currency currency) {
+                                  setState(() {
+                                    currencyControllers[index].text =
+                                        currency.code;
+                                  });
+                                },
+                              );
+                            },
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please select a currency';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        Expanded(
+                          child: TextFormField(
+                            controller: balanceControllers[index],
+                            decoration: const InputDecoration(
+                                labelText: "Balance",
+                                hintText: "e.g. 1000.0",
+                                border: OutlineInputBorder()),
+                            keyboardType:
+                                TextInputType.numberWithOptions(decimal: true),
+                            inputFormatters: [
+                              // Allow only numbers and decimal point, and limit to two decimal places
+                              FilteringTextInputFormatter.allow(
+                                  RegExp(r'^\d+\.?\d{0,2}')),
+                            ],
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter a balance';
+                              }
+                              if (double.tryParse(value) == null) {
+                                return 'Please enter a valid number';
+                              }
+                              final parts = value.split('.');
+                              if (parts.length == 2 && parts[1].length > 2) {
+                                return 'Balance cannot have more than two decimal places';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.remove_circle),
+                          onPressed: () {
+                            removeCurrencyField(index);
+                          },
+                        ),
+                      ],
                     );
                   },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please select a currency';
-                    }
-                    return null;
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    addCurrencyField('', '0.0');
                   },
+                  child: const Text("Add Currency"),
                 ),
                 Row(
                   children: [

@@ -6,12 +6,12 @@ import '../pages/accounts/accounts_page.dart';
 import 'settings_controller.dart';
 
 class NavBar extends StatefulWidget {
+  final SettingsController settingsController;
+
   const NavBar({
     super.key,
     required this.settingsController,
   });
-
-  final SettingsController settingsController;
 
   @override
   NavBarState createState() => NavBarState();
@@ -25,11 +25,6 @@ class NavBarState extends State<NavBar> {
     GlobalKey<NavigatorState>(), // Accounts Navigatorator
   ];
 
-  final List<Widget> pages = [
-    const HomePage(),
-    const AccountsPage(),
-  ];
-
   void onTap(int index) {
     setState(() {
       currentIndex = index;
@@ -39,13 +34,8 @@ class NavBarState extends State<NavBar> {
   @override
   Widget build(BuildContext context) {
     return AdaptiveNavigationScaffold(
-      appBar: AppBar(
-        // leading: IconButton(
-        //   icon: const Icon(Icons.menu),
-        //   onPressed: () {},
-        // ),
+      appBar: AdaptiveAppBar(
         title: const Text('FinC'),
-        // centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.account_circle),
@@ -58,7 +48,10 @@ class NavBarState extends State<NavBar> {
       onDestinationSelected: onTap,
       body: IndexedStack(
         index: currentIndex,
-        children: pages,
+        children: <Widget>[
+          HomePage(settingsController: widget.settingsController),
+          TempPage(),
+        ],
       ),
       selectedIndex: currentIndex,
       destinations: [
@@ -73,10 +66,19 @@ class NavBarState extends State<NavBar> {
       ],
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          context.go('/home/add-transaction');
+          context.push('/add-transaction');
         },
         child: const Icon(Icons.add),
       ),
+    );
+  }
+}
+
+class TempPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text('Accounts Page'),
     );
   }
 }

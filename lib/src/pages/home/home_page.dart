@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import '../../components/settings_controller.dart';
 import 'balance_tab.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final SettingsController settingsController;
+
+  const HomePage({super.key, required this.settingsController});
 
   @override
-  State<HomePage> createState() => HomePageState();
+  HomePageState createState() => HomePageState();
 }
 
 class HomePageState extends State<HomePage> {
@@ -27,7 +30,7 @@ class HomePageState extends State<HomePage> {
         ),
         body: TabBarView(
           children: <Widget>[
-            BalanceTab(),
+            BalanceTab(settingsController: widget.settingsController),
             portfolioView(),
           ],
         ),

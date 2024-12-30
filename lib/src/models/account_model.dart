@@ -7,8 +7,7 @@ class AccountModel {
   final String userId;
   final AccountType accountType;
   final String accountName;
-  final double balance;
-  final String currency;
+  final Map<String, double> balances;
   final int icon;
   final int color;
   final Timestamp createdAt;
@@ -18,8 +17,7 @@ class AccountModel {
     required this.userId,
     required this.accountType,
     required this.accountName,
-    required this.balance,
-    required this.currency,
+    required this.balances,
     required this.icon,
     required this.color,
     required this.createdAt,
@@ -32,8 +30,7 @@ class AccountModel {
       userId: data['userId'],
       accountType: AccountType.values[data['accountType']],
       accountName: data['accountName'],
-      balance: data['balance'],
-      currency: data['currency'],
+      balances: Map<String, double>.from(data['balances']),
       icon: data['icon'],
       color: data['color'],
       createdAt: data['createdAt'],
@@ -45,8 +42,7 @@ class AccountModel {
       'userId': userId,
       'accountType': accountType.index,
       'accountName': accountName,
-      'balance': balance,
-      'currency': currency,
+      'balances': balances,
       'icon': icon,
       'color': color,
       'createdAt': createdAt,

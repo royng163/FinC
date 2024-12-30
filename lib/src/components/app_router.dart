@@ -29,22 +29,20 @@ class AppRouter {
         path: '/home',
         builder: (context, state) =>
             NavBar(settingsController: settingsController),
-        routes: [
-          GoRoute(
-            path: 'add-account',
-            builder: (context, state) =>
-                AddAccountView(settingsController: settingsController),
-          ),
-          GoRoute(
-            path: 'add-transaction',
-            builder: (context, state) =>
-                AddTransactionView(settingsController: settingsController),
-          ),
-          GoRoute(
-            path: 'add-tag',
-            builder: (context, state) => AddTagView(),
-          ),
-        ],
+      ),
+      GoRoute(
+        path: '/add-account',
+        builder: (context, state) =>
+            AddAccountView(settingsController: settingsController),
+      ),
+      GoRoute(
+        path: '/add-tag',
+        builder: (context, state) => AddTagView(),
+      ),
+      GoRoute(
+        path: '/add-transaction',
+        builder: (context, state) =>
+            AddTransactionView(settingsController: settingsController),
       ),
       GoRoute(
         path: '/accounts',

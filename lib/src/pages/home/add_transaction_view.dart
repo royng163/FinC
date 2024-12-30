@@ -21,10 +21,8 @@ class AddTransactionViewState extends State<AddTransactionView> {
   TransactionType selectedTransactionType = TransactionType.expense;
   String selectedAccount = "";
   List<Map<String, dynamic>> accounts = [];
-
   List<String> selectedTags = [];
   List<Map<String, dynamic>> tags = [];
-
   final TextEditingController transactionNameController =
       TextEditingController();
   final TextEditingController amountController = TextEditingController();
@@ -33,15 +31,14 @@ class AddTransactionViewState extends State<AddTransactionView> {
   final TextEditingController transactionTimeController =
       TextEditingController();
 
-  late FirestoreService firestore;
+  final FirestoreService firestore = FirestoreService();
 
   @override
   void initState() {
     super.initState();
-    firestore = FirestoreService();
     currencyController.text = widget.settingsController.baseCurrency;
     transactionTimeController.text =
-        DateFormat('yy-MM-dd HH:mm').format(DateTime.now());
+        DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now());
 
     fetchDataFromFirestore();
   }
@@ -71,13 +68,14 @@ class AddTransactionViewState extends State<AddTransactionView> {
             .map((doc) => {
                   'accountId': doc.id,
                   'accountName': doc['accountName'],
-                  'balance': doc['balance'],
+                  'balances': doc['balances'],
                   'icon': IconData(doc['icon'], fontFamily: 'MaterialIcons'),
                   'color': Color(doc['color']),
                 })
             .toList();
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to fetch data: $e')),
       );
@@ -116,19 +114,30 @@ class AddTransactionViewState extends State<AddTransactionView> {
         currency: currencyController.text,
         description: descriptionController.text,
         transactionType: selectedTransactionType,
-        transactionTime: Timestamp.fromDate(
-            DateFormat('yy-MM-dd HH:mm').parse(transactionTimeController.text)),
+        transactionTime: Timestamp.fromDate(DateFormat('yyyy-MM-dd HH:mm')
+            .parse(transactionTimeController.text)),
       );
 
       await firestore.createTransaction(transaction);
 
-      // Update the account balance
+      // Update the account balance according to the currency
       final account =
           accounts.firstWhere((a) => a['accountId'] == selectedAccount);
+      double updatedBalance =
+          account['balances'][currencyController.text] ?? 0.0;
+      if (selectedTransactionType == TransactionType.expense) {
+        updatedBalance -= amount;
+      } else if (selectedTransactionType == TransactionType.income) {
+        updatedBalance += amount;
+      }
+
+      // Update the balances map
+      account['balances'][currencyController.text] = updatedBalance;
+
       await FirebaseFirestore.instance
           .collection('Accounts')
           .doc(selectedAccount)
-          .update({'balance': account['balance'] + amount});
+          .update({'balances': account['balances']});
 
       if (!mounted) return;
 
@@ -136,18 +145,6 @@ class AddTransactionViewState extends State<AddTransactionView> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Transaction Added Successfully')),
       );
-
-      // Clear the form
-      transactionNameController.clear();
-      amountController.clear();
-      descriptionController.clear();
-      setState(() {
-        selectedTransactionType = TransactionType.expense;
-        selectedAccount = "";
-        selectedTags = [];
-        transactionTimeController.text =
-            DateFormat('yy-MM-dd HH:mm').format(DateTime.now());
-      });
 
       Navigator.pop(context);
     } catch (e) {
@@ -360,8 +357,8 @@ class AddTransactionViewState extends State<AddTransactionView> {
                     Expanded(
                       child: TextFormField(
                         controller: TextEditingController(
-                            text: DateFormat('yy-MM-dd').format(
-                                DateFormat('yy-MM-dd HH:mm')
+                            text: DateFormat('yyyy-MM-dd').format(
+                                DateFormat('yyyy-MM-dd HH:mm')
                                     .parse(transactionTimeController.text))),
                         decoration: const InputDecoration(
                           labelText: "Date",
@@ -380,7 +377,7 @@ class AddTransactionViewState extends State<AddTransactionView> {
                           if (pickedDate != null) {
                             final currentTime = DateFormat('HH:mm').parse(
                                 DateFormat('HH:mm').format(
-                                    DateFormat('yy-MM-dd HH:mm').parse(
+                                    DateFormat('yyyy-MM-dd HH:mm').parse(
                                         transactionTimeController.text)));
 
                             final combinedDateTime = DateTime(
@@ -393,7 +390,7 @@ class AddTransactionViewState extends State<AddTransactionView> {
 
                             setState(() {
                               transactionTimeController.text =
-                                  DateFormat('yy-MM-dd HH:mm')
+                                  DateFormat('yyyy-MM-dd HH:mm')
                                       .format(combinedDateTime);
                             });
                           }
@@ -404,7 +401,7 @@ class AddTransactionViewState extends State<AddTransactionView> {
                       child: TextFormField(
                         controller: TextEditingController(
                             text: DateFormat('HH:mm').format(
-                                DateFormat('yy-MM-dd HH:mm')
+                                DateFormat('yyyy-MM-dd HH:mm')
                                     .parse(transactionTimeController.text))),
                         decoration: const InputDecoration(
                           labelText: "Time",
@@ -419,9 +416,9 @@ class AddTransactionViewState extends State<AddTransactionView> {
                           );
 
                           if (pickedTime != null) {
-                            final currentDate = DateFormat('yy-MM-dd').parse(
-                                DateFormat('yy-MM-dd').format(
-                                    DateFormat('yy-MM-dd HH:mm').parse(
+                            final currentDate = DateFormat('yyyy-MM-dd').parse(
+                                DateFormat('yyyy-MM-dd').format(
+                                    DateFormat('yyyy-MM-dd HH:mm').parse(
                                         transactionTimeController.text)));
 
                             final combinedDateTime = DateTime(
@@ -434,7 +431,7 @@ class AddTransactionViewState extends State<AddTransactionView> {
 
                             setState(() {
                               transactionTimeController.text =
-                                  DateFormat('yy-MM-dd HH:mm')
+                                  DateFormat('yyyy-MM-dd HH:mm')
                                       .format(combinedDateTime);
                             });
                           }

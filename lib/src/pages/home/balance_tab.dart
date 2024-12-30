@@ -1,15 +1,18 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:currency_converter_pro/currency_converter_pro.dart';
 import 'package:finc/src/models/account_model.dart';
 import 'package:finc/src/models/tag_model.dart';
-import 'package:finc/src/pages/home/edit_transaction_view.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-
+import '../../components/settings_controller.dart';
 import '../../models/transaction_model.dart';
+import 'edit_transaction_view.dart';
 
 class BalanceTab extends StatefulWidget {
-  const BalanceTab({super.key});
+  final SettingsController settingsController;
+
+  const BalanceTab({super.key, required this.settingsController});
 
   @override
   BalanceTabState createState() => BalanceTabState();
@@ -27,6 +30,7 @@ class BalanceTabState extends State<BalanceTab> {
   DocumentSnapshot? lastDocument;
   final int pageSize = 10;
   final ScrollController scrollController = ScrollController();
+  final currencyConverter = CurrencyConverterPro();
 
   @override
   void initState() {
@@ -54,15 +58,28 @@ class BalanceTabState extends State<BalanceTab> {
       double balance = 0.0;
       List<AccountModel> fetchedAccounts = accountsSnapshot.docs.map((doc) {
         final account = AccountModel.fromDocument(doc);
-        balance += account.balance;
         return account;
       }).toList();
+
+      String myCurrency = widget.settingsController.baseCurrency.toLowerCase();
+
+      for (var account in fetchedAccounts) {
+        for (var entry in account.balances.entries) {
+          var amount = await currencyConverter.convertCurrency(
+            amount: entry.value,
+            fromCurrency: entry.key.toLowerCase(),
+            toCurrency: myCurrency,
+          );
+          balance += amount;
+        }
+      }
 
       setState(() {
         totalBalance = balance;
         accounts = fetchedAccounts;
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to fetch total balance: $e')),
       );
@@ -82,24 +99,25 @@ class BalanceTabState extends State<BalanceTab> {
       final now = DateTime.now();
       final currentMonth = DateTime(now.year, now.month, 1);
 
-      transactionsSnapshot.docs.forEach((doc) {
+      for (var doc in transactionsSnapshot.docs) {
         final transaction = TransactionModel.fromDocument(doc);
         final transactionDate = transaction.transactionTime.toDate();
 
         if (transactionDate.isAfter(currentMonth)) {
-          if (transaction.amount > 0) {
+          if (transaction.transactionType == TransactionType.income) {
             income += transaction.amount;
-          } else {
+          } else if (transaction.transactionType == TransactionType.expense) {
             expense += transaction.amount;
           }
         }
-      });
+      }
 
       setState(() {
         totalIncome = income;
         totalExpense = expense;
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to fetch transactions: $e')),
       );
@@ -143,6 +161,7 @@ class BalanceTabState extends State<BalanceTab> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to fetch transactions: $e')),
       );
@@ -162,15 +181,16 @@ class BalanceTabState extends State<BalanceTab> {
           .get();
 
       Map<String, TagModel> fetchedTags = {};
-      tagsSnapshot.docs.forEach((doc) {
+      for (var doc in tagsSnapshot.docs) {
         final tag = TagModel.fromDocument(doc);
         fetchedTags[tag.tagId] = tag;
-      });
+      }
 
       setState(() {
         tags = fetchedTags;
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to fetch tags: $e')),
       );
@@ -187,7 +207,9 @@ class BalanceTabState extends State<BalanceTab> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Card.filled(
+        Card(
+          color: Theme.of(context).cardColor,
+          surfaceTintColor: Theme.of(context).primaryColor,
           margin: const EdgeInsets.all(8),
           elevation: 2,
           shape:
@@ -220,7 +242,7 @@ class BalanceTabState extends State<BalanceTab> {
                         ),
                         Text(
                           totalIncome.toStringAsFixed(2),
-                          style: const TextStyle(fontSize: 18),
+                          style: const TextStyle(fontSize: 20),
                         ),
                       ],
                     ),
@@ -232,7 +254,7 @@ class BalanceTabState extends State<BalanceTab> {
                         ),
                         Text(
                           totalExpense.toStringAsFixed(2),
-                          style: const TextStyle(fontSize: 18),
+                          style: const TextStyle(fontSize: 20),
                         ),
                       ],
                     ),
@@ -247,13 +269,13 @@ class BalanceTabState extends State<BalanceTab> {
           children: [
             ElevatedButton(
               onPressed: () {
-                context.go('/home/add-account');
+                context.push('/add-account');
               },
               child: const Text('Add Account'),
             ),
             ElevatedButton(
               onPressed: () {
-                context.go('/home/add-tag');
+                context.push('/add-tag');
               },
               child: const Text('Add Tag'),
             ),
@@ -281,19 +303,34 @@ class BalanceTabState extends State<BalanceTab> {
                   .where((tag) => tag != null)
                   .toList();
               return ListTile(
-                title: Text(transaction.transactionName),
+                title: Text(transaction.transactionName,
+                    style: TextStyle(fontSize: 16)),
                 subtitle: Wrap(
-                  spacing: 6.0,
-                  runSpacing: 6.0,
                   children: transactionTags
-                      .map((tag) => Chip(
-                            label: Text(tag!.tagName),
-                            avatar: Icon(
-                              IconData(tag.icon, fontFamily: 'MaterialIcons'),
-                              size: 16,
-                              color: Color(tag.color),
+                      .map((tag) => Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 3.0, vertical: 1.0),
+                            margin: const EdgeInsets.only(top: 4.0, right: 4.0),
+                            decoration: BoxDecoration(
+                              color: Color(tag!.color).withAlpha(100),
+                              borderRadius: BorderRadius.circular(5.0),
                             ),
-                            backgroundColor: Color(tag.color).withOpacity(0.2),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  IconData(tag.icon,
+                                      fontFamily: 'MaterialIcons'),
+                                  size: 14,
+                                  color: Color(tag.color),
+                                ),
+                                const SizedBox(width: 4.0),
+                                Text(
+                                  tag.tagName,
+                                  style: const TextStyle(fontSize: 14),
+                                ),
+                              ],
+                            ),
                           ))
                       .toList(),
                 ),

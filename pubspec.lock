@@ -153,6 +153,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.8"
+  currency_converter_pro:
+    dependency: "direct main"
+    description:
+      name: currency_converter_pro
+      sha256: de0967832acb6758e60af2f8093ff0a5f6c342e18d7c1cf76d4aebe3912dc268
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.7"
   currency_picker:
     dependency: "direct main"
     description:
@@ -381,6 +389,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "14.6.2"
+  http:
+    dependency: transitive
+    description:
+      name: http
+      sha256: b9c29a161230ee03d3ccf545097fccd9b87a5264228c5d348202e0f0c28f9010
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.2.2"
   http_parser:
     dependency: transitive
     description:
