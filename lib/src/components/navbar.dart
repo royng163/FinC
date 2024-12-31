@@ -50,7 +50,7 @@ class NavBarState extends State<NavBar> {
         index: currentIndex,
         children: <Widget>[
           HomePage(settingsController: widget.settingsController),
-          TempPage(),
+          AccountsPage(),
         ],
       ),
       selectedIndex: currentIndex,
@@ -70,15 +70,6 @@ class NavBarState extends State<NavBar> {
         },
         child: const Icon(Icons.add),
       ),
-    );
-  }
-}
-
-class TempPage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text('Accounts Page'),
     );
   }
 }

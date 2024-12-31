@@ -193,9 +193,14 @@ class AddAccountViewState extends State<AddAccountView> {
                   spacing: 8.0,
                   children: AccountType.values.map((AccountType type) {
                     return ChoiceChip(
-                      label: Text(
-                          type.toString().split('.').last[0].toUpperCase() +
-                              type.toString().split('.').last.substring(1)),
+                      label: Text(type
+                          .toString()
+                          .split('.')
+                          .last
+                          .replaceAllMapped(RegExp(r'([a-z])([A-Z])'),
+                              (Match m) => "${m[1]} ${m[2]}")
+                          .replaceFirstMapped(RegExp(r'^[a-z]'),
+                              (Match m) => m[0]!.toUpperCase())),
                       selected: selectedAccountType == type,
                       onSelected: (bool selected) {
                         setState(() {
@@ -267,7 +272,7 @@ class AddAccountViewState extends State<AddAccountView> {
                             inputFormatters: [
                               // Allow only numbers and decimal point, and limit to two decimal places
                               FilteringTextInputFormatter.allow(
-                                  RegExp(r'^\d+\.?\d{0,2}')),
+                                  RegExp(r'^-?\d*\.?\d{0,2}')),
                             ],
                             validator: (value) {
                               if (value == null || value.isEmpty) {

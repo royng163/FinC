@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum AccountType { bank, securities }
+enum AccountType { bank, creditCard, securities }
 
 class AccountModel {
   final String accountId;

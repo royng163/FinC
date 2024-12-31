@@ -64,13 +64,16 @@ class BalanceTabState extends State<BalanceTab> {
       String myCurrency = widget.settingsController.baseCurrency.toLowerCase();
 
       for (var account in fetchedAccounts) {
-        for (var entry in account.balances.entries) {
-          var amount = await currencyConverter.convertCurrency(
-            amount: entry.value,
-            fromCurrency: entry.key.toLowerCase(),
-            toCurrency: myCurrency,
-          );
-          balance += amount;
+        if (account.accountType == AccountType.bank ||
+            account.accountType == AccountType.securities) {
+          for (var entry in account.balances.entries) {
+            var amount = await currencyConverter.convertCurrency(
+              amount: entry.value,
+              fromCurrency: entry.key.toLowerCase(),
+              toCurrency: myCurrency,
+            );
+            balance += amount;
+          }
         }
       }
 

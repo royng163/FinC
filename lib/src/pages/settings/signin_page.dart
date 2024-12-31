@@ -15,41 +15,38 @@ class SignInPageState extends State<SignInPage> {
 
   // Controllers for form fields
   final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
 
   bool isLoading = false;
   String? errorMessage;
 
-  final AuthenticationService authService = AuthenticationService();
+  final AuthenticationService auth = AuthenticationService();
 
-  // void signIn() async {
-  //   if (formKey.currentState!.validate()) {
-  //     setState(() {
-  //       isLoading = true;
-  //       errorMessage = null;
-  //     });
+  void sendSignInLink() async {
+    if (formKey.currentState!.validate()) {
+      setState(() {
+        isLoading = true;
+        errorMessage = null;
+      });
 
-  //     try {
-  //       UserModel? user = await authService.signIn(
-  //         email: emailController.text.trim(),
-  //         password: passwordController.text.trim(),
-  //       );
+      try {
+        await auth.sendSignInLinkToEmail(email: emailController.text.trim());
 
-  //       if (user != null) {
-  //         // Navigate to home or dashboard
-  //         Navigator.pushReplacementNamed(context, '/home');
-  //       }
-  //     } catch (e) {
-  //       setState(() {
-  //         errorMessage = e.toString().replaceFirst('Exception: ', '');
-  //       });
-  //     } finally {
-  //       setState(() {
-  //         isLoading = false;
-  //       });
-  //     }
-  //   }
-  // }
+        if (!mounted) return;
+        // Show a message to the user
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Sign-in link sent to your email')),
+        );
+      } catch (e) {
+        setState(() {
+          errorMessage = e.toString().replaceFirst('Exception: ', '');
+        });
+      } finally {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
 
   void signInAnonymously() async {
     setState(() {
@@ -58,7 +55,7 @@ class SignInPageState extends State<SignInPage> {
     });
 
     try {
-      UserModel? user = await authService.signInAnonymously();
+      UserModel? user = await auth.signInAnonymously();
 
       if (user != null) {
         if (mounted) {
@@ -108,17 +105,6 @@ class SignInPageState extends State<SignInPage> {
                               }
                               if (!RegExp(r'\S+@\S+\.\S+').hasMatch(value)) {
                                 return 'Please enter a valid email address';
-                              }
-                              return null;
-                            },
-                          ),
-                          TextFormField(
-                            controller: passwordController,
-                            decoration: InputDecoration(labelText: 'Password'),
-                            obscureText: true,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your password';
                               }
                               return null;
                             },

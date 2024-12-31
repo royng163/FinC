@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:currency_picker/currency_picker.dart';
 import '../../components/settings_controller.dart';
+import 'account_upgrade_page.dart';
 
 /// Displays the various settings that can be customized by the user.
 ///
 /// When a user changes a setting, the SettingsController is updated and
 /// Widgets that listen to the SettingsController are rebuilt.
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key, required this.controller});
-
-  static const routeName = '/settings';
-
   final SettingsController controller;
+
+  const SettingsPage({super.key, required this.controller});
 
   @override
   State<SettingsPage> createState() => SettingsPageState();
@@ -61,6 +60,17 @@ class SettingsPageState extends State<SettingsPage> {
               child: Text(
                   'Select Base Currency: ${widget.controller.baseCurrency}'),
             ),
+            // ElevatedButton(
+            //   onPressed: () {
+            //     Navigator.push(
+            //       context,
+            //       MaterialPageRoute(
+            //         builder: (context) => const AccountUpgradePage(),
+            //       ),
+            //     );
+            //   },
+            //   child: const Text('Upgrade Account'),
+            // ),
           ],
         ),
       ),
