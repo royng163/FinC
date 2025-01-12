@@ -94,6 +94,12 @@ class AddTransactionViewState extends State<AddTransactionView> {
 
   void addTransaction() async {
     try {
+      if (selectedAccount.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select an account')),
+        );
+        return;
+      }
       final User? user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         throw Exception('No user is currently signed in.');

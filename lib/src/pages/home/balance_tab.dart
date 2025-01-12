@@ -1,11 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:currency_converter_pro/currency_converter_pro.dart';
 import 'package:finc/src/helpers/balance_service.dart';
 import 'package:finc/src/models/account_model.dart';
 import 'package:finc/src/models/tag_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import '../../components/app_routes.dart';
 import '../../components/settings_controller.dart';
 import '../../models/transaction_model.dart';
 import 'edit_transaction_view.dart';
@@ -39,7 +40,7 @@ class BalanceTabState extends State<BalanceTab> {
     balanceService = BalanceService();
     fetchTotalBalance();
     fetchMonthlyTransactions();
-    fetchTransactions();
+    fetchAccounts();
     fetchTags();
     scrollController.addListener(() {
       if (scrollController.position.pixels ==
@@ -100,6 +101,41 @@ class BalanceTabState extends State<BalanceTab> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to fetch transactions: $e')),
       );
+    }
+  }
+
+  Future<void> fetchAccounts() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final User? user = FirebaseAuth.instance.currentUser;
+      final accountsSnapshot = await FirebaseFirestore.instance
+          .collection('Accounts')
+          .where('userId', isEqualTo: user?.uid)
+          .get();
+
+      List<AccountModel> fetchedAccounts = accountsSnapshot.docs.map((doc) {
+        return AccountModel.fromDocument(doc);
+      }).toList();
+
+      setState(() {
+        accounts = fetchedAccounts;
+        isLoading = false;
+        if (accounts.isNotEmpty) {
+          fetchTransactions();
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to fetch accounts: $e')),
+      );
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 
@@ -184,6 +220,24 @@ class BalanceTabState extends State<BalanceTab> {
 
   @override
   Widget build(BuildContext context) {
+    // Group transactions by date
+    Map<String, List<TransactionModel>> groupedTransactions = {};
+    for (var transaction in transactions) {
+      String date =
+          DateFormat('yyyy-MM-dd').format(transaction.transactionTime.toDate());
+      if (!groupedTransactions.containsKey(date)) {
+        groupedTransactions[date] = [];
+      }
+      groupedTransactions[date]!.add(transaction);
+    }
+
+    // Create a list that includes both date headers and transactions
+    List<dynamic> items = [];
+    groupedTransactions.forEach((date, transactions) {
+      items.add(date); // Add date header
+      items.addAll(transactions); // Add transactions for that date
+    });
+
     return Column(
       children: [
         Card(
@@ -248,13 +302,13 @@ class BalanceTabState extends State<BalanceTab> {
           children: [
             ElevatedButton(
               onPressed: () {
-                context.push('/add-account');
+                context.push(AppRoutes.nestedAddAccount);
               },
               child: const Text('Add Account'),
             ),
             ElevatedButton(
               onPressed: () {
-                context.push('/add-tag');
+                context.push(AppRoutes.nestedAddTag);
               },
               child: const Text('Add Tag'),
             ),
@@ -269,70 +323,96 @@ class BalanceTabState extends State<BalanceTab> {
         Expanded(
           child: ListView.builder(
             controller: scrollController,
-            itemCount: transactions.length + (hasMore ? 1 : 0),
+            itemCount: items.length + (hasMore ? 1 : 0),
             itemBuilder: (BuildContext context, int index) {
-              if (index == transactions.length) {
+              if (index == items.length) {
                 return isLoading
                     ? const Center(child: CircularProgressIndicator())
                     : const SizedBox.shrink();
               }
-              final transaction = transactions[index];
-              final transactionTags = transaction.tags
-                  .map((tagId) => tags[tagId])
-                  .where((tag) => tag != null)
-                  .toList();
-              return ListTile(
-                title: Text(transaction.transactionName,
-                    style: TextStyle(fontSize: 16)),
-                subtitle: Wrap(
-                  children: transactionTags
-                      .map((tag) => Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 3.0, vertical: 1.0),
-                            margin: const EdgeInsets.only(top: 4.0, right: 4.0),
-                            decoration: BoxDecoration(
-                              color: Color(tag!.color).withAlpha(100),
-                              borderRadius: BorderRadius.circular(5.0),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  IconData(tag.icon,
-                                      fontFamily: 'MaterialIcons'),
-                                  size: 14,
-                                  color: Color(tag.color),
-                                ),
-                                const SizedBox(width: 4.0),
-                                Text(
-                                  tag.tagName,
-                                  style: const TextStyle(fontSize: 14),
-                                ),
-                              ],
-                            ),
-                          ))
-                      .toList(),
-                ),
-                trailing: Text(
-                  '${transaction.amount} ${transaction.currency}',
-                  style: const TextStyle(fontSize: 18),
-                ),
-                onTap: () async {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => EditTransactionView(
-                        transaction: transaction,
+
+              final item = items[index];
+              if (item is String) {
+                // Date header
+                return Container(
+                    color: Theme.of(context).splashColor,
+                    child: Text(item, style: const TextStyle(fontSize: 16)));
+              } else if (item is TransactionModel) {
+                final transaction = item;
+                final transactionTags = transaction.tags
+                    .map((tagId) => tags[tagId])
+                    .where((tag) => tag != null)
+                    .toList();
+                // Retrieve account information using accountId
+                final account = accounts.firstWhere(
+                    (account) => account.accountId == transaction.accountId,
+                    orElse: () => throw StateError(
+                        'No account found for accountId: ${transaction.accountId}'));
+                final accountTag = TagModel(
+                  tagId: "",
+                  userId: "",
+                  tagName: account.accountName,
+                  tagType: TagType.methods,
+                  color: account.color,
+                  icon: account.icon,
+                );
+                // Prepend the new tag object to the transactionTags list
+                transactionTags.insert(0, accountTag);
+                return ListTile(
+                  title: Text(transaction.transactionName,
+                      style: TextStyle(fontSize: 16)),
+                  subtitle: Wrap(
+                    children: transactionTags
+                        .map((tag) => Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 3.0, vertical: 1.0),
+                              margin:
+                                  const EdgeInsets.only(top: 4.0, right: 4.0),
+                              decoration: BoxDecoration(
+                                color: Color(tag!.color).withAlpha(100),
+                                borderRadius: BorderRadius.circular(5.0),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    IconData(tag.icon,
+                                        fontFamily: 'MaterialIcons'),
+                                    size: 14,
+                                    color: Color(tag.color),
+                                  ),
+                                  const SizedBox(width: 4.0),
+                                  Text(
+                                    tag.tagName,
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                ],
+                              ),
+                            ))
+                        .toList(),
+                  ),
+                  trailing: Text(
+                    '${transaction.amount} ${transaction.currency}',
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                  onTap: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => EditTransactionView(
+                          transaction: transaction,
+                        ),
                       ),
-                    ),
-                  );
-                  if (result == true) {
-                    fetchTotalBalance();
-                    fetchMonthlyTransactions();
-                    fetchTransactions();
-                  }
-                },
-              );
+                    );
+                    if (result == true) {
+                      fetchTotalBalance();
+                      fetchMonthlyTransactions();
+                      fetchAccounts();
+                    }
+                  },
+                );
+              }
+              return const SizedBox.shrink();
             },
           ),
         ),

@@ -1,4 +1,7 @@
+import 'package:adaptive_navigation/adaptive_navigation.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../../components/app_routes.dart';
 import '../../components/settings_controller.dart';
 import 'balance_tab.dart';
 
@@ -18,15 +21,24 @@ class HomePageState extends State<HomePage> {
       initialIndex: 0,
       length: 2,
       child: Scaffold(
-        appBar: const TabBar(
-          tabs: <Widget>[
-            Tab(
-              text: "Balance",
-            ),
-            Tab(
-              text: "Portfolio",
+        appBar: AdaptiveAppBar(
+          title: const Text('FinC'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.account_circle),
+              onPressed: () => context.push(AppRoutes.settings),
             ),
           ],
+          bottom: const TabBar(
+            tabs: <Widget>[
+              Tab(
+                text: "Balance",
+              ),
+              Tab(
+                text: "Portfolio",
+              ),
+            ],
+          ),
         ),
         body: TabBarView(
           children: <Widget>[

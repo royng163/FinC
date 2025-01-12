@@ -1,9 +1,12 @@
+import 'package:adaptive_navigation/adaptive_navigation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:finc/src/helpers/balance_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../components/app_routes.dart';
 import '../../components/settings_controller.dart';
 import 'edit_account_view.dart';
 import '../../models/account_model.dart';
@@ -108,6 +111,15 @@ class AccountsPageState extends State<AccountsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AdaptiveAppBar(
+        title: const Text('FinC'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.account_circle),
+            onPressed: () => context.push(AppRoutes.settings),
+          ),
+        ],
+      ),
       body: isLoadingAccounts
           ? const Center(child: CircularProgressIndicator())
           : Column(
@@ -208,7 +220,9 @@ class AccountsPageState extends State<AccountsPage> {
                               subtitle: Text(DateFormat.yMMMd().format(
                                   transaction.transactionTime.toDate())),
                               trailing: Text(
-                                  '\$${transaction.amount.toStringAsFixed(2)}'),
+                                '\$${transaction.amount.toStringAsFixed(2)}',
+                                style: const TextStyle(fontSize: 18),
+                              ),
                             );
                           },
                         ),

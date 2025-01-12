@@ -1,4 +1,6 @@
-import 'package:finc/src/components/navbar.dart';
+import 'package:finc/src/components/app_routes.dart';
+import 'package:finc/src/components/app_wrapper.dart';
+import 'package:flutter/material.dart';
 import 'package:finc/src/pages/home/add_account_view.dart';
 import 'package:finc/src/pages/home/add_tag_view.dart';
 import 'package:go_router/go_router.dart';
@@ -9,7 +11,10 @@ import 'package:finc/src/pages/settings/settings_page.dart';
 import 'package:finc/src/pages/home/add_transaction_view.dart';
 import 'package:finc/src/components/settings_controller.dart';
 
+import '../pages/home/home_page.dart';
+
 class AppRouter {
+  final _rootNavigatorKey = GlobalKey<NavigatorState>();
   final UserModel? currentUser;
   final SettingsController settingsController;
 
@@ -18,42 +23,60 @@ class AppRouter {
     required this.settingsController,
   });
 
-  late final GoRouter router = GoRouter(
-    initialLocation: currentUser == null ? '/signin' : '/home',
+  late final router = GoRouter(
+    navigatorKey: _rootNavigatorKey,
+    initialLocation: currentUser == null ? AppRoutes.signin : AppRoutes.home,
     routes: [
-      GoRoute(
-        path: '/signin',
-        builder: (context, state) => SignInPage(),
-      ),
-      GoRoute(
-        path: '/home',
-        builder: (context, state) =>
-            NavBar(settingsController: settingsController),
-      ),
-      GoRoute(
-        path: '/add-account',
-        builder: (context, state) =>
-            AddAccountView(settingsController: settingsController),
-      ),
-      GoRoute(
-        path: '/add-tag',
-        builder: (context, state) => AddTagView(),
-      ),
-      GoRoute(
-        path: '/add-transaction',
-        builder: (context, state) =>
-            AddTransactionView(settingsController: settingsController),
-      ),
-      GoRoute(
-        path: '/accounts',
-        builder: (context, state) =>
-            AccountsPage(settingsController: settingsController),
-      ),
-      GoRoute(
-        path: '/settings',
-        builder: (context, state) =>
-            SettingsPage(controller: settingsController),
-      ),
+      StatefulShellRoute.indexedStack(
+          builder: (context, state, navigationShell) => AppWrapper(
+              settingsController: settingsController,
+              navigationShell: navigationShell),
+          branches: [
+            StatefulShellBranch(routes: [
+              GoRoute(
+                  path: AppRoutes.home,
+                  builder: (context, state) =>
+                      HomePage(settingsController: settingsController),
+                  routes: [
+                    GoRoute(
+                      path: AppRoutes.addAccount,
+                      builder: (context, state) => AddAccountView(
+                          settingsController: settingsController),
+                    ),
+                    GoRoute(
+                      path: AppRoutes.addTag,
+                      builder: (context, state) => AddTagView(),
+                    ),
+                  ]),
+            ]),
+            StatefulShellBranch(routes: [
+              GoRoute(
+                path: AppRoutes.accounts,
+                builder: (context, state) =>
+                    AccountsPage(settingsController: settingsController),
+              ),
+            ]),
+            StatefulShellBranch(routes: [
+              GoRoute(
+                path: AppRoutes.signin,
+                builder: (context, state) => SignInPage(),
+              ),
+            ]),
+            StatefulShellBranch(routes: [
+              GoRoute(
+                path: AppRoutes.addTransaction,
+                builder: (context, state) =>
+                    AddTransactionView(settingsController: settingsController),
+              ),
+            ]),
+            StatefulShellBranch(routes: [
+              GoRoute(
+                path: AppRoutes.settings,
+                builder: (context, state) =>
+                    SettingsPage(controller: settingsController),
+              ),
+            ]),
+          ]),
     ],
   );
 }
