@@ -46,7 +46,8 @@ class AppRouter {
       ),
       GoRoute(
         path: '/accounts',
-        builder: (context, state) => AccountsPage(),
+        builder: (context, state) =>
+            AccountsPage(settingsController: settingsController),
       ),
       GoRoute(
         path: '/settings',

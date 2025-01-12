@@ -168,7 +168,7 @@ class EditTransactionViewState extends State<EditTransactionView> {
         SnackBar(content: Text('Transaction updated successfully')),
       );
 
-      Navigator.pop(context);
+      Navigator.pop(context, true);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to update transaction: $e')),

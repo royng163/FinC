@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:currency_converter_pro/currency_converter_pro.dart';
+import 'package:finc/src/helpers/balance_service.dart';
 import 'package:finc/src/models/account_model.dart';
 import 'package:finc/src/models/tag_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -30,11 +31,12 @@ class BalanceTabState extends State<BalanceTab> {
   DocumentSnapshot? lastDocument;
   final int pageSize = 10;
   final ScrollController scrollController = ScrollController();
-  final currencyConverter = CurrencyConverterPro();
+  late BalanceService balanceService;
 
   @override
   void initState() {
     super.initState();
+    balanceService = BalanceService();
     fetchTotalBalance();
     fetchMonthlyTransactions();
     fetchTransactions();
@@ -49,37 +51,11 @@ class BalanceTabState extends State<BalanceTab> {
 
   Future<void> fetchTotalBalance() async {
     try {
-      final User? user = FirebaseAuth.instance.currentUser;
-      final accountsSnapshot = await FirebaseFirestore.instance
-          .collection('Accounts')
-          .where('userId', isEqualTo: user?.uid)
-          .get();
-
-      double balance = 0.0;
-      List<AccountModel> fetchedAccounts = accountsSnapshot.docs.map((doc) {
-        final account = AccountModel.fromDocument(doc);
-        return account;
-      }).toList();
-
-      String myCurrency = widget.settingsController.baseCurrency.toLowerCase();
-
-      for (var account in fetchedAccounts) {
-        if (account.accountType == AccountType.bank ||
-            account.accountType == AccountType.securities) {
-          for (var entry in account.balances.entries) {
-            var amount = await currencyConverter.convertCurrency(
-              amount: entry.value,
-              fromCurrency: entry.key.toLowerCase(),
-              toCurrency: myCurrency,
-            );
-            balance += amount;
-          }
-        }
-      }
+      double balance = await balanceService
+          .getTotalBalance(widget.settingsController.baseCurrency);
 
       setState(() {
         totalBalance = balance;
-        accounts = fetchedAccounts;
       });
     } catch (e) {
       if (!mounted) return;
@@ -341,14 +317,20 @@ class BalanceTabState extends State<BalanceTab> {
                   '${transaction.amount} ${transaction.currency}',
                   style: const TextStyle(fontSize: 18),
                 ),
-                onTap: () {
-                  Navigator.push(
+                onTap: () async {
+                  final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          EditTransactionView(transaction: transaction),
+                      builder: (context) => EditTransactionView(
+                        transaction: transaction,
+                      ),
                     ),
                   );
+                  if (result == true) {
+                    fetchTotalBalance();
+                    fetchMonthlyTransactions();
+                    fetchTransactions();
+                  }
                 },
               );
             },

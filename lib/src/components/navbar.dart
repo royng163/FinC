@@ -50,7 +50,7 @@ class NavBarState extends State<NavBar> {
         index: currentIndex,
         children: <Widget>[
           HomePage(settingsController: widget.settingsController),
-          AccountsPage(),
+          AccountsPage(settingsController: widget.settingsController),
         ],
       ),
       selectedIndex: currentIndex,
