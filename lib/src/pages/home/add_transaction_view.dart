@@ -20,6 +20,7 @@ class AddTransactionView extends StatefulWidget {
 class AddTransactionViewState extends State<AddTransactionView> {
   TransactionType selectedTransactionType = TransactionType.expense;
   String selectedAccount = "";
+  String selectedDestinationAccount = "";
   List<Map<String, dynamic>> accounts = [];
   List<String> selectedTags = [];
   List<Map<String, dynamic>> tags = [];
@@ -100,6 +101,25 @@ class AddTransactionViewState extends State<AddTransactionView> {
         );
         return;
       }
+
+      if (selectedTransactionType == TransactionType.transfer &&
+          selectedDestinationAccount.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a transfer account')),
+        );
+        return;
+      }
+
+      final double amount = double.parse(amountController.text);
+      if (selectedTransactionType != TransactionType.adjustment && amount < 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content:
+                  Text('Negative amounts are only allowed for adjustments')),
+        );
+        return;
+      }
+
       final User? user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         throw Exception('No user is currently signed in.');
@@ -108,7 +128,6 @@ class AddTransactionViewState extends State<AddTransactionView> {
       final String userId = user.uid;
       final String transactionId =
           firestore.db.collection('Transactions').doc().id;
-      final double amount = double.parse(amountController.text);
 
       final TransactionModel transaction = TransactionModel(
         transactionId: transactionId,
@@ -131,10 +150,30 @@ class AddTransactionViewState extends State<AddTransactionView> {
           accounts.firstWhere((a) => a['accountId'] == selectedAccount);
       double updatedBalance =
           account['balances'][currencyController.text] ?? 0.0;
-      if (selectedTransactionType == TransactionType.expense) {
-        updatedBalance -= amount;
-      } else if (selectedTransactionType == TransactionType.income) {
-        updatedBalance += amount;
+      switch (selectedTransactionType) {
+        case TransactionType.expense:
+          updatedBalance -= amount;
+          break;
+        case TransactionType.income:
+          updatedBalance += amount;
+          break;
+        case TransactionType.transfer:
+          // Handle transfer case
+          final destinationAccount = accounts
+              .firstWhere((a) => a['accountId'] == selectedDestinationAccount);
+          double transferUpdatedBalance =
+              destinationAccount['balances'][currencyController.text] ?? 0.0;
+          updatedBalance -= amount;
+          transferUpdatedBalance += amount;
+          destinationAccount['balances'][currencyController.text] =
+              transferUpdatedBalance;
+          await FirebaseFirestore.instance
+              .collection('Accounts')
+              .doc(selectedDestinationAccount)
+              .update({'balances': destinationAccount['balances']});
+          break;
+        case TransactionType.adjustment:
+          updatedBalance += amount;
       }
 
       // Update the balances map
@@ -242,58 +281,89 @@ class AddTransactionViewState extends State<AddTransactionView> {
                     },
                   ),
                 ),
-                Row(
-                  children: [
-                    Text("Tags"),
-                  ],
-                ),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: FormField(
-                    builder: (FormFieldState<dynamic> field) {
-                      return Wrap(
-                        alignment: WrapAlignment.start,
-                        spacing: 8,
-                        children: tags
-                            .map((c) => ChoiceChip(
-                                  avatar: Icon(c['icon']),
-                                  backgroundColor: c['color'],
-                                  label: Text(c['tagName']),
-                                  selected: selectedTags.contains(c['tagId']),
-                                  onSelected: (bool selected) {
-                                    setState(() {
-                                      if (selected) {
-                                        selectedTags.add(c['tagId']);
-                                      } else {
-                                        selectedTags.remove(c['tagId']);
-                                      }
-                                    });
-                                  },
-                                ))
-                            .toList(),
-                      );
+                if (selectedTransactionType == TransactionType.transfer) ...[
+                  Row(
+                    children: [
+                      Text("Transfer To Account"),
+                    ],
+                  ),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: FormField(
+                      builder: (FormFieldState<dynamic> field) {
+                        return Wrap(
+                          alignment: WrapAlignment.start,
+                          spacing: 8,
+                          children: accounts
+                              .map((a) => ChoiceChip(
+                                    avatar: Icon(a['icon']),
+                                    backgroundColor: a['color'],
+                                    label: Text(a['accountName']),
+                                    selected: selectedDestinationAccount ==
+                                        a['accountId'],
+                                    onSelected: (bool selected) {
+                                      setState(() {
+                                        transactionNameController.text =
+                                            a['accountId'];
+                                        selectedDestinationAccount =
+                                            selected ? a['accountId'] : "";
+                                      });
+                                    },
+                                  ))
+                              .toList(),
+                        );
+                      },
+                    ),
+                  ),
+                ] else ...[
+                  Row(
+                    children: [
+                      Text("Tags"),
+                    ],
+                  ),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: FormField(
+                      builder: (FormFieldState<dynamic> field) {
+                        return Wrap(
+                          alignment: WrapAlignment.start,
+                          spacing: 8,
+                          children: tags
+                              .map((c) => ChoiceChip(
+                                    avatar: Icon(c['icon']),
+                                    backgroundColor: c['color'],
+                                    label: Text(c['tagName']),
+                                    selected: selectedTags.contains(c['tagId']),
+                                    onSelected: (bool selected) {
+                                      setState(() {
+                                        if (selected) {
+                                          selectedTags.add(c['tagId']);
+                                        } else {
+                                          selectedTags.remove(c['tagId']);
+                                        }
+                                      });
+                                    },
+                                  ))
+                              .toList(),
+                        );
+                      },
+                    ),
+                  ),
+                  TextFormField(
+                    controller: transactionNameController,
+                    decoration: const InputDecoration(
+                        labelText: "Name",
+                        hintText: "e.g. Lunch",
+                        border: OutlineInputBorder()),
+                    keyboardType: TextInputType.text,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a transaction name';
+                      }
+                      return null;
                     },
                   ),
-                ),
-                Row(
-                  children: [
-                    Text("Details"),
-                  ],
-                ),
-                TextFormField(
-                  controller: transactionNameController,
-                  decoration: const InputDecoration(
-                      labelText: "Name",
-                      hintText: "e.g. Lunch",
-                      border: OutlineInputBorder()),
-                  keyboardType: TextInputType.text,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a transaction name';
-                    }
-                    return null;
-                  },
-                ),
+                ],
                 TextFormField(
                   controller: amountController,
                   decoration: const InputDecoration(
@@ -304,7 +374,7 @@ class AddTransactionViewState extends State<AddTransactionView> {
                   inputFormatters: [
                     // Allow only numbers and decimal point, and limit to two decimal places
                     FilteringTextInputFormatter.allow(
-                        RegExp(r'^\d+\.?\d{0,2}')),
+                        RegExp(r'^-?\d*\.?\d{0,2}')),
                   ],
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -316,6 +386,10 @@ class AddTransactionViewState extends State<AddTransactionView> {
                     final parts = value.split('.');
                     if (parts.length == 2 && parts[1].length > 2) {
                       return 'Amount cannot have more than two decimal places';
+                    }
+                    if (selectedTransactionType != TransactionType.adjustment &&
+                        double.parse(value) < 0) {
+                      return 'Negative amounts are only allowed for adjustments';
                     }
                     return null;
                   },
@@ -375,7 +449,8 @@ class AddTransactionViewState extends State<AddTransactionView> {
                         onTap: () async {
                           DateTime? pickedDate = await showDatePicker(
                             context: context,
-                            initialDate: DateTime.now(),
+                            initialDate: DateFormat('yyyy-MM-dd')
+                                .parse(transactionTimeController.text),
                             firstDate: DateTime(2000),
                             lastDate: DateTime.now(),
                           );
@@ -416,9 +491,13 @@ class AddTransactionViewState extends State<AddTransactionView> {
                         ),
                         readOnly: true,
                         onTap: () async {
+                          final initialTime = TimeOfDay.fromDateTime(
+                            DateFormat('yyyy-MM-dd HH:mm')
+                                .parse(transactionTimeController.text),
+                          );
                           TimeOfDay? pickedTime = await showTimePicker(
                             context: context,
-                            initialTime: TimeOfDay.now(),
+                            initialTime: initialTime,
                           );
 
                           if (pickedTime != null) {

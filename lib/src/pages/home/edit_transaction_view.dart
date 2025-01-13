@@ -416,45 +416,98 @@ class EditTransactionViewState extends State<EditTransactionView> {
                 keyboardType: TextInputType.text,
               ),
               const SizedBox(height: 10),
-              TextFormField(
-                controller: transactionTimeController,
-                decoration: const InputDecoration(
-                  labelText: "Date & Time",
-                  border: OutlineInputBorder(),
-                  suffixIcon: Icon(Icons.calendar_today),
-                ),
-                readOnly: true,
-                onTap: () async {
-                  DateTime? pickedDate = await showDatePicker(
-                    context: context,
-                    initialDate: DateTime.now(),
-                    firstDate: DateTime(2000),
-                    lastDate: DateTime.now(),
-                  );
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: TextEditingController(
+                          text: DateFormat('yyyy-MM-dd').format(
+                              DateFormat('yyyy-MM-dd HH:mm')
+                                  .parse(transactionTimeController.text))),
+                      decoration: const InputDecoration(
+                        labelText: "Date",
+                        border: OutlineInputBorder(),
+                        suffixIcon: Icon(Icons.calendar_month),
+                      ),
+                      readOnly: true,
+                      onTap: () async {
+                        DateTime? pickedDate = await showDatePicker(
+                          context: context,
+                          initialDate: DateFormat('yyyy-MM-dd')
+                              .parse(transactionTimeController.text),
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime.now(),
+                        );
 
-                  if (pickedDate != null) {
-                    TimeOfDay? pickedTime = await showTimePicker(
-                      context: context,
-                      initialTime: TimeOfDay.now(),
-                    );
+                        if (pickedDate != null) {
+                          final currentTime = DateFormat('HH:mm').parse(
+                              DateFormat('HH:mm').format(
+                                  DateFormat('yyyy-MM-dd HH:mm')
+                                      .parse(transactionTimeController.text)));
 
-                    if (pickedTime != null) {
-                      final combinedDateTime = DateTime(
-                        pickedDate.year,
-                        pickedDate.month,
-                        pickedDate.day,
-                        pickedTime.hour,
-                        pickedTime.minute,
-                      );
+                          final combinedDateTime = DateTime(
+                            pickedDate.year,
+                            pickedDate.month,
+                            pickedDate.day,
+                            currentTime.hour,
+                            currentTime.minute,
+                          );
 
-                      setState(() {
-                        transactionTimeController.text =
-                            DateFormat('yyyy-MM-dd HH:mm')
-                                .format(combinedDateTime);
-                      });
-                    }
-                  }
-                },
+                          setState(() {
+                            transactionTimeController.text =
+                                DateFormat('yyyy-MM-dd HH:mm')
+                                    .format(combinedDateTime);
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                  Expanded(
+                    child: TextFormField(
+                      controller: TextEditingController(
+                          text: DateFormat('HH:mm').format(
+                              DateFormat('yyyy-MM-dd HH:mm')
+                                  .parse(transactionTimeController.text))),
+                      decoration: const InputDecoration(
+                        labelText: "Time",
+                        border: OutlineInputBorder(),
+                        suffixIcon: Icon(Icons.access_time),
+                      ),
+                      readOnly: true,
+                      onTap: () async {
+                        final initialTime = TimeOfDay.fromDateTime(
+                          DateFormat('yyyy-MM-dd HH:mm')
+                              .parse(transactionTimeController.text),
+                        );
+                        TimeOfDay? pickedTime = await showTimePicker(
+                          context: context,
+                          initialTime: initialTime,
+                        );
+
+                        if (pickedTime != null) {
+                          final currentDate = DateFormat('yyyy-MM-dd').parse(
+                              DateFormat('yyyy-MM-dd').format(
+                                  DateFormat('yyyy-MM-dd HH:mm')
+                                      .parse(transactionTimeController.text)));
+
+                          final combinedDateTime = DateTime(
+                            currentDate.year,
+                            currentDate.month,
+                            currentDate.day,
+                            pickedTime.hour,
+                            pickedTime.minute,
+                          );
+
+                          setState(() {
+                            transactionTimeController.text =
+                                DateFormat('yyyy-MM-dd HH:mm')
+                                    .format(combinedDateTime);
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 20),
               ElevatedButton(
