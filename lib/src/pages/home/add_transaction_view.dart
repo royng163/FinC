@@ -1,6 +1,9 @@
+import 'package:finc/src/models/account_model.dart';
+import 'package:finc/src/models/tag_model.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_iconpicker/flutter_iconpicker.dart';
 import '../../models/transaction_model.dart';
 import 'package:intl/intl.dart';
 import '../../helpers/firestore_service.dart';
@@ -21,16 +24,14 @@ class AddTransactionViewState extends State<AddTransactionView> {
   TransactionType selectedTransactionType = TransactionType.expense;
   String selectedAccount = "";
   String selectedDestinationAccount = "";
-  List<Map<String, dynamic>> accounts = [];
+  List<AccountModel> accounts = [];
   List<String> selectedTags = [];
-  List<Map<String, dynamic>> tags = [];
-  final TextEditingController transactionNameController =
-      TextEditingController();
+  List<TagModel> tags = [];
+  final TextEditingController transactionNameController = TextEditingController();
   final TextEditingController amountController = TextEditingController();
   final TextEditingController currencyController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
-  final TextEditingController transactionTimeController =
-      TextEditingController();
+  final TextEditingController transactionTimeController = TextEditingController();
 
   final FirestoreService firestore = FirestoreService();
 
@@ -38,8 +39,7 @@ class AddTransactionViewState extends State<AddTransactionView> {
   void initState() {
     super.initState();
     currencyController.text = widget.settingsController.baseCurrency;
-    transactionTimeController.text =
-        DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now());
+    transactionTimeController.text = DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now());
 
     fetchDataFromFirestore();
   }
@@ -47,34 +47,10 @@ class AddTransactionViewState extends State<AddTransactionView> {
   Future<void> fetchDataFromFirestore() async {
     try {
       final User? user = FirebaseAuth.instance.currentUser;
-      final accountsSnapshot = await firestore.db
-          .collection('Accounts')
-          .where('userId', isEqualTo: user?.uid)
-          .get();
-      final tagsSnapshot = await firestore.db
-          .collection('Tags')
-          .where('userId', isEqualTo: user?.uid)
-          .get();
+      accounts = await firestore.getAccounts(user!.uid);
+      tags = await firestore.getTags(user.uid);
 
-      setState(() {
-        tags = tagsSnapshot.docs
-            .map((doc) => {
-                  'tagId': doc.id,
-                  'tagName': doc['tagName'],
-                  'icon': IconData(doc['icon'], fontFamily: 'MaterialIcons'),
-                  'color': Color(doc['color']),
-                })
-            .toList();
-        accounts = accountsSnapshot.docs
-            .map((doc) => {
-                  'accountId': doc.id,
-                  'accountName': doc['accountName'],
-                  'balances': doc['balances'],
-                  'icon': IconData(doc['icon'], fontFamily: 'MaterialIcons'),
-                  'color': Color(doc['color']),
-                })
-            .toList();
-      });
+      setState(() {});
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -94,6 +70,7 @@ class AddTransactionViewState extends State<AddTransactionView> {
   }
 
   void addTransaction() async {
+    String response = "";
     try {
       if (selectedAccount.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -102,8 +79,7 @@ class AddTransactionViewState extends State<AddTransactionView> {
         return;
       }
 
-      if (selectedTransactionType == TransactionType.transfer &&
-          selectedDestinationAccount.isEmpty) {
+      if (selectedTransactionType == TransactionType.transfer && selectedDestinationAccount.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please select a transfer account')),
         );
@@ -113,9 +89,7 @@ class AddTransactionViewState extends State<AddTransactionView> {
       final double amount = double.parse(amountController.text);
       if (selectedTransactionType != TransactionType.adjustment && amount < 0) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content:
-                  Text('Negative amounts are only allowed for adjustments')),
+          const SnackBar(content: Text('Negative amounts are only allowed for adjustments')),
         );
         return;
       }
@@ -125,77 +99,35 @@ class AddTransactionViewState extends State<AddTransactionView> {
         throw Exception('No user is currently signed in.');
       }
 
-      final String userId = user.uid;
-      final String transactionId =
-          firestore.db.collection('Transactions').doc().id;
-
-      final TransactionModel transaction = TransactionModel(
-        transactionId: transactionId,
-        userId: userId,
+      final TransactionModel newTransaction = TransactionModel(
+        transactionId: firestore.db.collection('Transactions').doc().id,
+        userId: user.uid,
         accountId: selectedAccount,
         tags: selectedTags,
-        transactionName: transactionNameController.text,
+        transactionName: selectedTransactionType == TransactionType.transfer
+            ? selectedDestinationAccount
+            : transactionNameController.text,
         amount: amount,
         currency: currencyController.text,
         description: descriptionController.text,
         transactionType: selectedTransactionType,
-        transactionTime: Timestamp.fromDate(DateFormat('yyyy-MM-dd HH:mm')
-            .parse(transactionTimeController.text)),
+        transactionTime: Timestamp.fromDate(DateFormat('yyyy-MM-dd HH:mm').parse(transactionTimeController.text)),
       );
 
-      await firestore.createTransaction(transaction);
-
-      // Update the account balance according to the currency
-      final account =
-          accounts.firstWhere((a) => a['accountId'] == selectedAccount);
-      double updatedBalance =
-          account['balances'][currencyController.text] ?? 0.0;
-      switch (selectedTransactionType) {
-        case TransactionType.expense:
-          updatedBalance -= amount;
-          break;
-        case TransactionType.income:
-          updatedBalance += amount;
-          break;
-        case TransactionType.transfer:
-          // Handle transfer case
-          final destinationAccount = accounts
-              .firstWhere((a) => a['accountId'] == selectedDestinationAccount);
-          double transferUpdatedBalance =
-              destinationAccount['balances'][currencyController.text] ?? 0.0;
-          updatedBalance -= amount;
-          transferUpdatedBalance += amount;
-          destinationAccount['balances'][currencyController.text] =
-              transferUpdatedBalance;
-          await FirebaseFirestore.instance
-              .collection('Accounts')
-              .doc(selectedDestinationAccount)
-              .update({'balances': destinationAccount['balances']});
-          break;
-        case TransactionType.adjustment:
-          updatedBalance += amount;
-      }
-
-      // Update the balances map
-      account['balances'][currencyController.text] = updatedBalance;
-
-      await FirebaseFirestore.instance
-          .collection('Accounts')
-          .doc(selectedAccount)
-          .update({'balances': account['balances']});
+      response = await firestore.setTransaction(newTransaction);
 
       if (!mounted) return;
 
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Transaction Added Successfully')),
+        SnackBar(content: Text(response)),
       );
 
       Navigator.pop(context);
     } catch (e) {
       // Handle errors gracefully
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to add transaction: $e')),
+        SnackBar(content: Text(response)),
       );
     }
   }
@@ -226,14 +158,13 @@ class AddTransactionViewState extends State<AddTransactionView> {
                         spacing: 8,
                         children: accounts
                             .map((a) => ChoiceChip(
-                                  avatar: Icon(a['icon']),
-                                  backgroundColor: a['color'],
-                                  label: Text(a['accountName']),
-                                  selected: selectedAccount == a['accountId'],
+                                  avatar: Icon(deserializeIcon(a.icon)?.data, color: Color(a.color)),
+                                  backgroundColor: Color(a.color).withAlpha(100),
+                                  label: Text(a.accountName),
+                                  selected: selectedAccount == a.accountId,
                                   onSelected: (bool selected) {
                                     setState(() {
-                                      selectedAccount =
-                                          selected ? a['accountId'] : "";
+                                      selectedAccount = selected ? a.accountId : "";
                                     });
                                   },
                                 ))
@@ -256,23 +187,12 @@ class AddTransactionViewState extends State<AddTransactionView> {
                         spacing: 8,
                         children: TransactionType.values
                             .map((t) => ChoiceChip(
-                                  label: Text(t
-                                          .toString()
-                                          .split('.')
-                                          .last[0]
-                                          .toUpperCase() +
-                                      t
-                                          .toString()
-                                          .split('.')
-                                          .last
-                                          .substring(1)
-                                          .toLowerCase()),
+                                  label: Text(t.toString().split('.').last[0].toUpperCase() +
+                                      t.toString().split('.').last.substring(1).toLowerCase()),
                                   selected: selectedTransactionType == t,
                                   onSelected: (bool selected) {
                                     setState(() {
-                                      selectedTransactionType = selected
-                                          ? t
-                                          : TransactionType.expense;
+                                      selectedTransactionType = selected ? t : TransactionType.expense;
                                     });
                                   },
                                 ))
@@ -296,17 +216,13 @@ class AddTransactionViewState extends State<AddTransactionView> {
                           spacing: 8,
                           children: accounts
                               .map((a) => ChoiceChip(
-                                    avatar: Icon(a['icon']),
-                                    backgroundColor: a['color'],
-                                    label: Text(a['accountName']),
-                                    selected: selectedDestinationAccount ==
-                                        a['accountId'],
+                                    avatar: Icon(deserializeIcon(a.icon)?.data, color: Color(a.color)),
+                                    backgroundColor: Color(a.color).withAlpha(100),
+                                    label: Text(a.accountName),
+                                    selected: selectedDestinationAccount == a.accountId,
                                     onSelected: (bool selected) {
                                       setState(() {
-                                        transactionNameController.text =
-                                            a['accountId'];
-                                        selectedDestinationAccount =
-                                            selected ? a['accountId'] : "";
+                                        selectedDestinationAccount = selected ? a.accountId : "";
                                       });
                                     },
                                   ))
@@ -330,16 +246,16 @@ class AddTransactionViewState extends State<AddTransactionView> {
                           spacing: 8,
                           children: tags
                               .map((c) => ChoiceChip(
-                                    avatar: Icon(c['icon']),
-                                    backgroundColor: c['color'],
-                                    label: Text(c['tagName']),
-                                    selected: selectedTags.contains(c['tagId']),
+                                    avatar: Icon(deserializeIcon(c.icon)?.data, color: Color(c.color)),
+                                    backgroundColor: Color(c.color).withAlpha(100),
+                                    label: Text(c.tagName),
+                                    selected: selectedTags.contains(c.tagId),
                                     onSelected: (bool selected) {
                                       setState(() {
                                         if (selected) {
-                                          selectedTags.add(c['tagId']);
+                                          selectedTags.add(c.tagId);
                                         } else {
-                                          selectedTags.remove(c['tagId']);
+                                          selectedTags.remove(c.tagId);
                                         }
                                       });
                                     },
@@ -351,10 +267,8 @@ class AddTransactionViewState extends State<AddTransactionView> {
                   ),
                   TextFormField(
                     controller: transactionNameController,
-                    decoration: const InputDecoration(
-                        labelText: "Name",
-                        hintText: "e.g. Lunch",
-                        border: OutlineInputBorder()),
+                    decoration:
+                        const InputDecoration(labelText: "Name", hintText: "e.g. Lunch", border: OutlineInputBorder()),
                     keyboardType: TextInputType.text,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -366,15 +280,12 @@ class AddTransactionViewState extends State<AddTransactionView> {
                 ],
                 TextFormField(
                   controller: amountController,
-                  decoration: const InputDecoration(
-                      labelText: "Amount",
-                      hintText: "e.g. 79.9",
-                      border: OutlineInputBorder()),
+                  decoration:
+                      const InputDecoration(labelText: "Amount", hintText: "e.g. 79.9", border: OutlineInputBorder()),
                   keyboardType: TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [
                     // Allow only numbers and decimal point, and limit to two decimal places
-                    FilteringTextInputFormatter.allow(
-                        RegExp(r'^-?\d*\.?\d{0,2}')),
+                    FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d{0,2}')),
                   ],
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -387,8 +298,7 @@ class AddTransactionViewState extends State<AddTransactionView> {
                     if (parts.length == 2 && parts[1].length > 2) {
                       return 'Amount cannot have more than two decimal places';
                     }
-                    if (selectedTransactionType != TransactionType.adjustment &&
-                        double.parse(value) < 0) {
+                    if (selectedTransactionType != TransactionType.adjustment && double.parse(value) < 0) {
                       return 'Negative amounts are only allowed for adjustments';
                     }
                     return null;
@@ -423,8 +333,7 @@ class AddTransactionViewState extends State<AddTransactionView> {
                 ),
                 TextFormField(
                   controller: descriptionController,
-                  decoration: const InputDecoration(
-                      labelText: "Description", border: OutlineInputBorder()),
+                  decoration: const InputDecoration(labelText: "Description", border: OutlineInputBorder()),
                   keyboardType: TextInputType.text,
                 ),
                 Row(
@@ -437,9 +346,8 @@ class AddTransactionViewState extends State<AddTransactionView> {
                     Expanded(
                       child: TextFormField(
                         controller: TextEditingController(
-                            text: DateFormat('yyyy-MM-dd').format(
-                                DateFormat('yyyy-MM-dd HH:mm')
-                                    .parse(transactionTimeController.text))),
+                            text: DateFormat('yyyy-MM-dd')
+                                .format(DateFormat('yyyy-MM-dd HH:mm').parse(transactionTimeController.text))),
                         decoration: const InputDecoration(
                           labelText: "Date",
                           border: OutlineInputBorder(),
@@ -449,17 +357,14 @@ class AddTransactionViewState extends State<AddTransactionView> {
                         onTap: () async {
                           DateTime? pickedDate = await showDatePicker(
                             context: context,
-                            initialDate: DateFormat('yyyy-MM-dd')
-                                .parse(transactionTimeController.text),
+                            initialDate: DateFormat('yyyy-MM-dd').parse(transactionTimeController.text),
                             firstDate: DateTime(2000),
                             lastDate: DateTime.now(),
                           );
 
                           if (pickedDate != null) {
-                            final currentTime = DateFormat('HH:mm').parse(
-                                DateFormat('HH:mm').format(
-                                    DateFormat('yyyy-MM-dd HH:mm').parse(
-                                        transactionTimeController.text)));
+                            final currentTime = DateFormat('HH:mm').parse(DateFormat('HH:mm')
+                                .format(DateFormat('yyyy-MM-dd HH:mm').parse(transactionTimeController.text)));
 
                             final combinedDateTime = DateTime(
                               pickedDate.year,
@@ -470,9 +375,7 @@ class AddTransactionViewState extends State<AddTransactionView> {
                             );
 
                             setState(() {
-                              transactionTimeController.text =
-                                  DateFormat('yyyy-MM-dd HH:mm')
-                                      .format(combinedDateTime);
+                              transactionTimeController.text = DateFormat('yyyy-MM-dd HH:mm').format(combinedDateTime);
                             });
                           }
                         },
@@ -481,9 +384,8 @@ class AddTransactionViewState extends State<AddTransactionView> {
                     Expanded(
                       child: TextFormField(
                         controller: TextEditingController(
-                            text: DateFormat('HH:mm').format(
-                                DateFormat('yyyy-MM-dd HH:mm')
-                                    .parse(transactionTimeController.text))),
+                            text: DateFormat('HH:mm')
+                                .format(DateFormat('yyyy-MM-dd HH:mm').parse(transactionTimeController.text))),
                         decoration: const InputDecoration(
                           labelText: "Time",
                           border: OutlineInputBorder(),
@@ -492,8 +394,7 @@ class AddTransactionViewState extends State<AddTransactionView> {
                         readOnly: true,
                         onTap: () async {
                           final initialTime = TimeOfDay.fromDateTime(
-                            DateFormat('yyyy-MM-dd HH:mm')
-                                .parse(transactionTimeController.text),
+                            DateFormat('yyyy-MM-dd HH:mm').parse(transactionTimeController.text),
                           );
                           TimeOfDay? pickedTime = await showTimePicker(
                             context: context,
@@ -501,10 +402,8 @@ class AddTransactionViewState extends State<AddTransactionView> {
                           );
 
                           if (pickedTime != null) {
-                            final currentDate = DateFormat('yyyy-MM-dd').parse(
-                                DateFormat('yyyy-MM-dd').format(
-                                    DateFormat('yyyy-MM-dd HH:mm').parse(
-                                        transactionTimeController.text)));
+                            final currentDate = DateFormat('yyyy-MM-dd').parse(DateFormat('yyyy-MM-dd')
+                                .format(DateFormat('yyyy-MM-dd HH:mm').parse(transactionTimeController.text)));
 
                             final combinedDateTime = DateTime(
                               currentDate.year,
@@ -515,9 +414,7 @@ class AddTransactionViewState extends State<AddTransactionView> {
                             );
 
                             setState(() {
-                              transactionTimeController.text =
-                                  DateFormat('yyyy-MM-dd HH:mm')
-                                      .format(combinedDateTime);
+                              transactionTimeController.text = DateFormat('yyyy-MM-dd HH:mm').format(combinedDateTime);
                             });
                           }
                         },

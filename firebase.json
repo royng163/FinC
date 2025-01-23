@@ -1,1 +1,32 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"ncfinance","appId":"1:991764411499:android:960a0f1de9f1ea94b3ed2e","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"ncfinance","configurations":{"android":"1:991764411499:android:960a0f1de9f1ea94b3ed2e","ios":"1:991764411499:ios:e138eea22b7e81e8b3ed2e","web":"1:991764411499:web:6f122d40958d38d2b3ed2e"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "ncfinance",
+          "appId": "1:991764411499:android:960a0f1de9f1ea94b3ed2e",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "ncfinance",
+          "configurations": {
+            "android": "1:991764411499:android:960a0f1de9f1ea94b3ed2e",
+            "ios": "1:991764411499:ios:e138eea22b7e81e8b3ed2e",
+            "web": "1:991764411499:web:6f122d40958d38d2b3ed2e"
+          }
+        }
+      }
+    }
+  },
+  "emulators": {
+    "singleProjectMode": true,
+    "firestore": {
+      "port": 8080
+    },
+    "ui": {
+      "enabled": true
+    }
+  }
+}

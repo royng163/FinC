@@ -6,25 +6,30 @@ import 'package:flutter_iconpicker/flutter_iconpicker.dart';
 import '../../models/tag_model.dart';
 import '../../helpers/firestore_service.dart';
 
-class AddTagView extends StatefulWidget {
-  const AddTagView({super.key});
+class EditTagView extends StatefulWidget {
+  final TagModel tag;
+
+  const EditTagView({super.key, required this.tag});
 
   @override
-  AddTagViewState createState() => AddTagViewState();
+  EditTagViewState createState() => EditTagViewState();
 }
 
-class AddTagViewState extends State<AddTagView> {
+class EditTagViewState extends State<EditTagView> {
   final TextEditingController tagNameController = TextEditingController();
-  Color selectedColor = Colors.grey;
+  late Color selectedColor;
   IconPickerIcon? selectedIcon;
-  TagType selectedTagType = TagType.categories;
+  late TagType selectedTagType;
 
-  late FirestoreService firestore;
+  final FirestoreService firestore = FirestoreService();
 
   @override
   void initState() {
     super.initState();
-    firestore = FirestoreService();
+    tagNameController.text = widget.tag.tagName;
+    selectedColor = Color(widget.tag.color);
+    selectedIcon = deserializeIcon(widget.tag.icon);
+    selectedTagType = widget.tag.tagType;
   }
 
   @override
@@ -33,7 +38,7 @@ class AddTagViewState extends State<AddTagView> {
     super.dispose();
   }
 
-  void addCategory() async {
+  Future<void> editTag() async {
     try {
       final User? user = FirebaseAuth.instance.currentUser;
       if (user == null) {
@@ -41,10 +46,9 @@ class AddTagViewState extends State<AddTagView> {
       }
 
       final String userId = user.uid;
-      final String categoryId = firestore.db.collection('Categories').doc().id;
 
-      final TagModel category = TagModel(
-        tagId: categoryId,
+      final TagModel updatedTag = TagModel(
+        tagId: widget.tag.tagId,
         userId: userId,
         tagName: tagNameController.text,
         tagType: selectedTagType,
@@ -52,27 +56,20 @@ class AddTagViewState extends State<AddTagView> {
         color: selectedColor.value,
       );
 
-      await firestore.setTag(category);
+      await firestore.setTag(updatedTag);
 
       if (!mounted) return;
 
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Category Added Successfully')),
+        SnackBar(content: Text('Tag Updated Successfully')),
       );
 
-      // Clear the form
-      tagNameController.clear();
-      setState(() {
-        selectedTagType = TagType.categories;
-        selectedColor = Colors.grey;
-      });
-
-      Navigator.pop(context);
+      Navigator.pop(context, true);
     } catch (e) {
       // Handle errors gracefully
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to add category: $e')),
+        SnackBar(content: Text('Failed to update tag: $e')),
       );
     }
   }
@@ -130,7 +127,7 @@ class AddTagViewState extends State<AddTagView> {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: const Text('New Tag'),
+          title: const Text('Edit Tag'),
         ),
         body: Padding(
           padding: const EdgeInsets.all(10),
@@ -168,7 +165,7 @@ class AddTagViewState extends State<AddTagView> {
                   keyboardType: TextInputType.text,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter a category name';
+                      return 'Please enter a tag name';
                     }
                     return null;
                   },
@@ -196,8 +193,8 @@ class AddTagViewState extends State<AddTagView> {
                   ],
                 ),
                 ElevatedButton(
-                  onPressed: addCategory,
-                  child: const Text("Add Category"),
+                  onPressed: editTag,
+                  child: const Text("Update Tag"),
                 ),
               ],
             ),

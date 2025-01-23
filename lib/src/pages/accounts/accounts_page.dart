@@ -43,13 +43,11 @@ class AccountsPageState extends State<AccountsPage> {
 
     try {
       final User? user = FirebaseAuth.instance.currentUser;
-      final accountsSnapshot = await FirebaseFirestore.instance
-          .collection('Accounts')
-          .where('userId', isEqualTo: user?.uid)
-          .get();
+      final accountsSnapshot =
+          await FirebaseFirestore.instance.collection('Accounts').where('userId', isEqualTo: user?.uid).get();
 
       List<AccountModel> fetchedAccounts = accountsSnapshot.docs.map((doc) {
-        return AccountModel.fromDocument(doc);
+        return AccountModel.fromFirestore(doc);
       }).toList();
 
       setState(() {
@@ -76,14 +74,19 @@ class AccountsPageState extends State<AccountsPage> {
     });
 
     try {
+      final User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('No user is currently signed in.');
+      }
+
       final transactionsSnapshot = await FirebaseFirestore.instance
           .collection('Transactions')
           .where('accountId', isEqualTo: accountId)
+          .where('userId', isEqualTo: user.uid) // Ensure the userId matches
           .get();
 
-      List<TransactionModel> fetchedTransactions =
-          transactionsSnapshot.docs.map((doc) {
-        return TransactionModel.fromDocument(doc);
+      List<TransactionModel> fetchedTransactions = transactionsSnapshot.docs.map((doc) {
+        return TransactionModel.fromFirestore(doc);
       }).toList();
 
       setState(() {
@@ -140,9 +143,8 @@ class AccountsPageState extends State<AccountsPage> {
                       final Color backgroundColor = Color(account.color);
                       final Color textColor = getTextColor(backgroundColor);
                       return FutureBuilder<double>(
-                        future: balanceService.getAccountBalance(
-                            account.balances,
-                            widget.settingsController.baseCurrency),
+                        future:
+                            balanceService.getAccountBalance(account.balances, widget.settingsController.baseCurrency),
                         builder: (context, snapshot) {
                           double accountBalance = snapshot.data ?? 0.0;
                           return GestureDetector(
@@ -163,8 +165,7 @@ class AccountsPageState extends State<AccountsPage> {
                               color: backgroundColor,
                               margin: const EdgeInsets.all(8),
                               elevation: 2,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               child: Padding(
                                 padding: const EdgeInsets.all(16.0),
                                 child: Column(
@@ -172,29 +173,23 @@ class AccountsPageState extends State<AccountsPage> {
                                   children: [
                                     Text(
                                       account.accountName,
-                                      style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: textColor),
+                                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor),
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
                                       'Balance: \$${accountBalance.toStringAsFixed(2)}',
-                                      style: TextStyle(
-                                          fontSize: 16, color: textColor),
+                                      style: TextStyle(fontSize: 16, color: textColor),
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
                                       'Account Type: ${account.accountType.toString().split('.').last}',
-                                      style: TextStyle(
-                                          fontSize: 16, color: textColor),
+                                      style: TextStyle(fontSize: 16, color: textColor),
                                     ),
                                     if (kDebugMode) ...[
                                       const SizedBox(height: 8),
                                       Text(
                                         'Account ID: ${account.accountId}',
-                                        style: TextStyle(
-                                            fontSize: 12, color: textColor),
+                                        style: TextStyle(fontSize: 12, color: textColor),
                                       ),
                                     ],
                                   ],
@@ -217,8 +212,7 @@ class AccountsPageState extends State<AccountsPage> {
                             final transaction = transactions[index];
                             return ListTile(
                               title: Text(transaction.transactionName),
-                              subtitle: Text(DateFormat.yMMMd().format(
-                                  transaction.transactionTime.toDate())),
+                              subtitle: Text(DateFormat.yMMMd().format(transaction.transactionTime.toDate())),
                               trailing: Text(
                                 '\$${transaction.amount.toStringAsFixed(2)}',
                                 style: const TextStyle(fontSize: 18),

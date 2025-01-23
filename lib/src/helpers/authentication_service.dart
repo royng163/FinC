@@ -40,10 +40,10 @@ class AuthenticationService {
           UserModel userModel = UserModel(
             userId: user.uid,
           );
-          await db.collection('Users').doc(user.uid).set(userModel.toMap());
+          await db.collection('Users').doc(user.uid).set(userModel.toFirestore());
           return userModel;
         } else {
-          return UserModel.fromDocument(doc);
+          return UserModel.fromFirestore(doc);
         }
       }
     } on FirebaseAuthException catch (e) {
@@ -85,10 +85,7 @@ class AuthenticationService {
             userId: linkedUser.uid,
             email: email,
           );
-          await db
-              .collection('Users')
-              .doc(linkedUser.uid)
-              .update(userModel.toMap());
+          await db.collection('Users').doc(linkedUser.uid).update(userModel.toFirestore());
 
           // Update the user's email without requiring a password
           await linkedUser.verifyBeforeUpdateEmail(email);

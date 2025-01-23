@@ -1,5 +1,6 @@
 import 'package:finc/src/components/app_routes.dart';
 import 'package:finc/src/components/app_wrapper.dart';
+import 'package:finc/src/pages/tags/tags_page.dart';
 import 'package:flutter/material.dart';
 import 'package:finc/src/pages/home/add_account_view.dart';
 import 'package:finc/src/pages/home/add_tag_view.dart';
@@ -28,20 +29,17 @@ class AppRouter {
     initialLocation: currentUser == null ? AppRoutes.signin : AppRoutes.home,
     routes: [
       StatefulShellRoute.indexedStack(
-          builder: (context, state, navigationShell) => AppWrapper(
-              settingsController: settingsController,
-              navigationShell: navigationShell),
+          builder: (context, state, navigationShell) =>
+              AppWrapper(settingsController: settingsController, navigationShell: navigationShell),
           branches: [
             StatefulShellBranch(routes: [
               GoRoute(
                   path: AppRoutes.home,
-                  builder: (context, state) =>
-                      HomePage(settingsController: settingsController),
+                  builder: (context, state) => HomePage(settingsController: settingsController),
                   routes: [
                     GoRoute(
                       path: AppRoutes.addAccount,
-                      builder: (context, state) => AddAccountView(
-                          settingsController: settingsController),
+                      builder: (context, state) => AddAccountView(settingsController: settingsController),
                     ),
                     GoRoute(
                       path: AppRoutes.addTag,
@@ -52,9 +50,11 @@ class AppRouter {
             StatefulShellBranch(routes: [
               GoRoute(
                 path: AppRoutes.accounts,
-                builder: (context, state) =>
-                    AccountsPage(settingsController: settingsController),
+                builder: (context, state) => AccountsPage(settingsController: settingsController),
               ),
+            ]),
+            StatefulShellBranch(routes: [
+              GoRoute(path: AppRoutes.tags, builder: (context, state) => TagsPage()),
             ]),
             StatefulShellBranch(routes: [
               GoRoute(
@@ -65,15 +65,13 @@ class AppRouter {
             StatefulShellBranch(routes: [
               GoRoute(
                 path: AppRoutes.addTransaction,
-                builder: (context, state) =>
-                    AddTransactionView(settingsController: settingsController),
+                builder: (context, state) => AddTransactionView(settingsController: settingsController),
               ),
             ]),
             StatefulShellBranch(routes: [
               GoRoute(
                 path: AppRoutes.settings,
-                builder: (context, state) =>
-                    SettingsPage(controller: settingsController),
+                builder: (context, state) => SettingsPage(controller: settingsController),
               ),
             ]),
           ]),

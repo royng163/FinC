@@ -27,10 +27,10 @@ class TransactionModel {
     required this.transactionTime,
   });
 
-  factory TransactionModel.fromDocument(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory TransactionModel.fromFirestore(DocumentSnapshot snapshot) {
+    final data = snapshot.data() as Map<String, dynamic>;
     return TransactionModel(
-      transactionId: doc.id,
+      transactionId: snapshot.id,
       userId: data['userId'],
       accountId: data['accountId'],
       tags: List<String>.from(data['tags']),
@@ -43,7 +43,7 @@ class TransactionModel {
     );
   }
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toFirestore() {
     return {
       'userId': userId,
       'accountId': accountId,

@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:finc/src/helpers/balance_service.dart';
+import 'package:finc/src/helpers/firestore_service.dart';
 import 'package:finc/src/models/account_model.dart';
 import 'package:finc/src/models/tag_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_iconpicker/flutter_iconpicker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../components/app_routes.dart';
@@ -33,6 +35,7 @@ class BalanceTabState extends State<BalanceTab> {
   final int pageSize = 10;
   final ScrollController scrollController = ScrollController();
   late BalanceService balanceService;
+  FirestoreService firestore = FirestoreService();
 
   @override
   void initState() {
@@ -43,8 +46,7 @@ class BalanceTabState extends State<BalanceTab> {
     fetchAccounts();
     fetchTags();
     scrollController.addListener(() {
-      if (scrollController.position.pixels ==
-          scrollController.position.maxScrollExtent) {
+      if (scrollController.position.pixels == scrollController.position.maxScrollExtent) {
         fetchTransactions();
       }
     });
@@ -52,8 +54,7 @@ class BalanceTabState extends State<BalanceTab> {
 
   Future<void> fetchTotalBalance() async {
     try {
-      double balance = await balanceService
-          .getTotalBalance(widget.settingsController.baseCurrency);
+      double balance = await balanceService.getTotalBalance(widget.settingsController.baseCurrency);
 
       setState(() {
         totalBalance = balance;
@@ -69,10 +70,8 @@ class BalanceTabState extends State<BalanceTab> {
   Future<void> fetchMonthlyTransactions() async {
     try {
       final User? user = FirebaseAuth.instance.currentUser;
-      final transactionsSnapshot = await FirebaseFirestore.instance
-          .collection('Transactions')
-          .where('userId', isEqualTo: user?.uid)
-          .get();
+      final transactionsSnapshot =
+          await FirebaseFirestore.instance.collection('Transactions').where('userId', isEqualTo: user?.uid).get();
 
       double income = 0.0;
       double expense = 0.0;
@@ -80,7 +79,7 @@ class BalanceTabState extends State<BalanceTab> {
       final currentMonth = DateTime(now.year, now.month, 1);
 
       for (var doc in transactionsSnapshot.docs) {
-        final transaction = TransactionModel.fromDocument(doc);
+        final transaction = TransactionModel.fromFirestore(doc);
         final transactionDate = transaction.transactionTime.toDate();
 
         if (transactionDate.isAfter(currentMonth)) {
@@ -111,19 +110,11 @@ class BalanceTabState extends State<BalanceTab> {
 
     try {
       final User? user = FirebaseAuth.instance.currentUser;
-      final accountsSnapshot = await FirebaseFirestore.instance
-          .collection('Accounts')
-          .where('userId', isEqualTo: user?.uid)
-          .get();
-
-      List<AccountModel> fetchedAccounts = accountsSnapshot.docs.map((doc) {
-        return AccountModel.fromDocument(doc);
-      }).toList();
-
+      List<AccountModel> fetchedAccounts = await firestore.getAccounts(user!.uid);
       setState(() {
         accounts = fetchedAccounts;
         isLoading = false;
-        if (accounts.isNotEmpty) {
+        if (fetchedAccounts.isNotEmpty) {
           fetchTransactions();
         }
       });
@@ -166,9 +157,8 @@ class BalanceTabState extends State<BalanceTab> {
         });
       } else {
         lastDocument = transactionsSnapshot.docs.last;
-        List<TransactionModel> fetchedTransactions =
-            transactionsSnapshot.docs.map((doc) {
-          return TransactionModel.fromDocument(doc);
+        List<TransactionModel> fetchedTransactions = transactionsSnapshot.docs.map((doc) {
+          return TransactionModel.fromFirestore(doc);
         }).toList();
 
         setState(() {
@@ -190,19 +180,10 @@ class BalanceTabState extends State<BalanceTab> {
   Future<void> fetchTags() async {
     try {
       final User? user = FirebaseAuth.instance.currentUser;
-      final tagsSnapshot = await FirebaseFirestore.instance
-          .collection('Tags')
-          .where('userId', isEqualTo: user?.uid)
-          .get();
-
-      Map<String, TagModel> fetchedTags = {};
-      for (var doc in tagsSnapshot.docs) {
-        final tag = TagModel.fromDocument(doc);
-        fetchedTags[tag.tagId] = tag;
-      }
+      List<TagModel> fetchedTags = await firestore.getTags(user!.uid);
 
       setState(() {
-        tags = fetchedTags;
+        tags = {for (var tag in fetchedTags) tag.tagId: tag};
       });
     } catch (e) {
       if (!mounted) return;
@@ -223,8 +204,7 @@ class BalanceTabState extends State<BalanceTab> {
     // Group transactions by date
     Map<String, List<TransactionModel>> groupedTransactions = {};
     for (var transaction in transactions) {
-      String date =
-          DateFormat('yyyy-MM-dd').format(transaction.transactionTime.toDate());
+      String date = DateFormat('yyyy-MM-dd').format(transaction.transactionTime.toDate());
       if (!groupedTransactions.containsKey(date)) {
         groupedTransactions[date] = [];
       }
@@ -245,8 +225,7 @@ class BalanceTabState extends State<BalanceTab> {
           surfaceTintColor: Theme.of(context).primaryColor,
           margin: const EdgeInsets.all(8),
           elevation: 2,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           child: Padding(
             padding: const EdgeInsets.all(8.0),
             child: Column(
@@ -316,8 +295,7 @@ class BalanceTabState extends State<BalanceTab> {
         ),
         const Row(
           children: [
-            Text("Transactions",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text("Transactions", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ],
         ),
         Expanded(
@@ -326,48 +304,37 @@ class BalanceTabState extends State<BalanceTab> {
             itemCount: items.length + (hasMore ? 1 : 0),
             itemBuilder: (BuildContext context, int index) {
               if (index == items.length) {
-                return isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : const SizedBox.shrink();
+                return isLoading ? const Center(child: CircularProgressIndicator()) : const SizedBox.shrink();
               }
 
               final item = items[index];
               if (item is String) {
                 // Date header
                 return Container(
-                    color: Theme.of(context).splashColor,
-                    child: Text(item, style: const TextStyle(fontSize: 16)));
+                    color: Theme.of(context).splashColor, child: Text(item, style: const TextStyle(fontSize: 16)));
               } else if (item is TransactionModel) {
                 final transaction = item;
-                final transactionTags = transaction.tags
-                    .map((tagId) => tags[tagId])
-                    .where((tag) => tag != null)
-                    .toList();
+                final transactionTags = transaction.tags.map((tagId) => tags[tagId]).toList();
                 // Retrieve account information using accountId
-                final account = accounts.firstWhere(
-                    (account) => account.accountId == transaction.accountId,
-                    orElse: () => throw StateError(
-                        'No account found for accountId: ${transaction.accountId}'));
+                final account = accounts.firstWhere((account) => account.accountId == transaction.accountId,
+                    orElse: () => throw StateError('No account found for accountId: ${transaction.accountId}'));
                 final accountTag = TagModel(
                   tagId: "",
                   userId: "",
                   tagName: account.accountName,
                   tagType: TagType.methods,
-                  color: account.color,
                   icon: account.icon,
+                  color: account.color,
                 );
                 // Prepend the new tag object to the transactionTags list
                 transactionTags.insert(0, accountTag);
                 return ListTile(
-                  title: Text(transaction.transactionName,
-                      style: TextStyle(fontSize: 16)),
+                  title: Text(transaction.transactionName, style: TextStyle(fontSize: 16)),
                   subtitle: Wrap(
                     children: transactionTags
                         .map((tag) => Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 3.0, vertical: 1.0),
-                              margin:
-                                  const EdgeInsets.only(top: 4.0, right: 4.0),
+                              padding: const EdgeInsets.symmetric(horizontal: 3.0, vertical: 1.0),
+                              margin: const EdgeInsets.only(top: 4.0, right: 4.0),
                               decoration: BoxDecoration(
                                 color: Color(tag!.color).withAlpha(100),
                                 borderRadius: BorderRadius.circular(5.0),
@@ -376,8 +343,7 @@ class BalanceTabState extends State<BalanceTab> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(
-                                    IconData(tag.icon,
-                                        fontFamily: 'MaterialIcons'),
+                                    deserializeIcon(tag.icon)?.data,
                                     size: 14,
                                     color: Color(tag.color),
                                   ),

@@ -25,7 +25,7 @@ class EditAccountViewState extends State<EditAccountView> {
   final List<TextEditingController> balanceControllers = [];
   final List<TextEditingController> currencyControllers = [];
   Color selectedColor = Colors.grey;
-  IconData selectedIcon = Icons.wallet;
+  IconPickerIcon? selectedIcon;
   AccountType selectedAccountType = AccountType.bank;
 
   late FirestoreService firestore;
@@ -36,7 +36,7 @@ class EditAccountViewState extends State<EditAccountView> {
     firestore = FirestoreService();
     accountNameController.text = widget.account.accountName;
     selectedColor = Color(widget.account.color);
-    selectedIcon = IconData(widget.account.icon, fontFamily: 'MaterialIcons');
+    selectedIcon = deserializeIcon(widget.account.icon);
     selectedAccountType = widget.account.accountType;
 
     widget.account.balances.forEach((currency, balance) {
@@ -97,15 +97,12 @@ class EditAccountViewState extends State<EditAccountView> {
         accountType: selectedAccountType,
         accountName: accountNameController.text,
         balances: balances,
-        icon: selectedIcon.codePoint,
+        icon: serializeIcon(selectedIcon!) ?? {},
         color: selectedColor.value,
         createdAt: widget.account.createdAt,
       );
 
-      await firestore.db
-          .collection('Accounts')
-          .doc(widget.account.accountId)
-          .update(updatedAccount.toMap());
+      await firestore.db.collection('Accounts').doc(widget.account.accountId).update(updatedAccount.toFirestore());
 
       if (!mounted) return;
 
@@ -125,10 +122,7 @@ class EditAccountViewState extends State<EditAccountView> {
 
   Future<void> deleteAccount() async {
     try {
-      await firestore.db
-          .collection('Accounts')
-          .doc(widget.account.accountId)
-          .delete();
+      await firestore.db.collection('Accounts').doc(widget.account.accountId).delete();
 
       if (!mounted) return;
 
@@ -184,16 +178,14 @@ class EditAccountViewState extends State<EditAccountView> {
   }
 
   void pickIcon() async {
-    IconPickerIcon? icon = await showIconPicker(
+    selectedIcon = await showIconPicker(
       context,
       configuration: SinglePickerConfiguration(
-        iconPackModes: [IconPack.material],
+        iconPackModes: [IconPack.fontAwesomeIcons],
       ),
     );
-    if (icon != null) {
-      setState(() {
-        selectedIcon = icon.data;
-      });
+    if (selectedIcon != null) {
+      setState(() {});
     }
   }
 
@@ -222,10 +214,8 @@ class EditAccountViewState extends State<EditAccountView> {
                         .toString()
                         .split('.')
                         .last
-                        .replaceAllMapped(RegExp(r'([a-z])([A-Z])'),
-                            (Match m) => "${m[1]} ${m[2]}")
-                        .replaceFirstMapped(RegExp(r'^[a-z]'),
-                            (Match m) => m[0]!.toUpperCase())),
+                        .replaceAllMapped(RegExp(r'([a-z])([A-Z])'), (Match m) => "${m[1]} ${m[2]}")
+                        .replaceFirstMapped(RegExp(r'^[a-z]'), (Match m) => m[0]!.toUpperCase())),
                     selected: selectedAccountType == type,
                     onSelected: (bool selected) {
                       setState(() {
@@ -240,9 +230,7 @@ class EditAccountViewState extends State<EditAccountView> {
               TextFormField(
                 controller: accountNameController,
                 decoration: const InputDecoration(
-                    labelText: "Account Name",
-                    hintText: "e.g. Cash",
-                    border: OutlineInputBorder()),
+                    labelText: "Account Name", hintText: "e.g. Cash", border: OutlineInputBorder()),
                 keyboardType: TextInputType.text,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -270,8 +258,7 @@ class EditAccountViewState extends State<EditAccountView> {
                               context: context,
                               onSelect: (Currency currency) {
                                 setState(() {
-                                  currencyControllers[index].text =
-                                      currency.code;
+                                  currencyControllers[index].text = currency.code;
                                 });
                               },
                             );
@@ -288,15 +275,11 @@ class EditAccountViewState extends State<EditAccountView> {
                         child: TextFormField(
                           controller: balanceControllers[index],
                           decoration: const InputDecoration(
-                              labelText: "Balance",
-                              hintText: "e.g. 1000.0",
-                              border: OutlineInputBorder()),
-                          keyboardType:
-                              TextInputType.numberWithOptions(decimal: true),
+                              labelText: "Balance", hintText: "e.g. 1000.0", border: OutlineInputBorder()),
+                          keyboardType: TextInputType.numberWithOptions(decimal: true),
                           inputFormatters: [
                             // Allow only numbers, decimal point, and negative sign, and limit to two decimal places
-                            FilteringTextInputFormatter.allow(
-                                RegExp(r'^-?\d*\.?\d{0,2}')),
+                            FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d{0,2}')),
                           ],
                           validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -351,7 +334,7 @@ class EditAccountViewState extends State<EditAccountView> {
                     onPressed: pickIcon,
                     child: const Text('Pick Icon'),
                   ),
-                  Icon(selectedIcon, color: selectedColor),
+                  if (selectedIcon != null) Icon(selectedIcon!.data, color: selectedColor),
                 ],
               ),
               ElevatedButton(

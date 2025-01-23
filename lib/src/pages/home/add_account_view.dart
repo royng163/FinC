@@ -24,7 +24,7 @@ class AddAccountViewState extends State<AddAccountView> {
   final List<TextEditingController> balanceControllers = [];
   final List<TextEditingController> currencyControllers = [];
   Color selectedColor = Colors.grey;
-  IconData selectedIcon = Icons.wallet;
+  IconPickerIcon? selectedIcon;
   AccountType selectedAccountType = AccountType.bank;
 
   late FirestoreService firestore;
@@ -89,12 +89,12 @@ class AddAccountViewState extends State<AddAccountView> {
         accountType: selectedAccountType,
         accountName: accountNameController.text,
         balances: balances,
-        icon: selectedIcon.codePoint,
+        icon: serializeIcon(selectedIcon!) ?? {},
         color: selectedColor.value,
         createdAt: Timestamp.now(),
       );
 
-      await firestore.createAccount(account);
+      await firestore.setAccount(account);
 
       if (!mounted) return;
 
@@ -113,7 +113,6 @@ class AddAccountViewState extends State<AddAccountView> {
       }
       setState(() {
         selectedColor = Colors.grey;
-        selectedIcon = Icons.wallet;
         selectedAccountType = AccountType.bank;
       });
 
@@ -164,16 +163,14 @@ class AddAccountViewState extends State<AddAccountView> {
   }
 
   void pickIcon() async {
-    IconPickerIcon? icon = await showIconPicker(
+    selectedIcon = await showIconPicker(
       context,
       configuration: SinglePickerConfiguration(
-        iconPackModes: [IconPack.material],
+        iconPackModes: [IconPack.fontAwesomeIcons],
       ),
     );
-    if (icon != null) {
-      setState(() {
-        selectedIcon = icon.data;
-      });
+    if (selectedIcon != null) {
+      setState(() {});
     }
   }
 
@@ -197,10 +194,8 @@ class AddAccountViewState extends State<AddAccountView> {
                           .toString()
                           .split('.')
                           .last
-                          .replaceAllMapped(RegExp(r'([a-z])([A-Z])'),
-                              (Match m) => "${m[1]} ${m[2]}")
-                          .replaceFirstMapped(RegExp(r'^[a-z]'),
-                              (Match m) => m[0]!.toUpperCase())),
+                          .replaceAllMapped(RegExp(r'([a-z])([A-Z])'), (Match m) => "${m[1]} ${m[2]}")
+                          .replaceFirstMapped(RegExp(r'^[a-z]'), (Match m) => m[0]!.toUpperCase())),
                       selected: selectedAccountType == type,
                       onSelected: (bool selected) {
                         setState(() {
@@ -215,9 +210,7 @@ class AddAccountViewState extends State<AddAccountView> {
                 TextFormField(
                   controller: accountNameController,
                   decoration: const InputDecoration(
-                      labelText: "Account Name",
-                      hintText: "e.g. Cash",
-                      border: OutlineInputBorder()),
+                      labelText: "Account Name", hintText: "e.g. Cash", border: OutlineInputBorder()),
                   keyboardType: TextInputType.text,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -246,8 +239,7 @@ class AddAccountViewState extends State<AddAccountView> {
                                 context: context,
                                 onSelect: (Currency currency) {
                                   setState(() {
-                                    currencyControllers[index].text =
-                                        currency.code;
+                                    currencyControllers[index].text = currency.code;
                                   });
                                 },
                               );
@@ -264,15 +256,11 @@ class AddAccountViewState extends State<AddAccountView> {
                           child: TextFormField(
                             controller: balanceControllers[index],
                             decoration: const InputDecoration(
-                                labelText: "Balance",
-                                hintText: "e.g. 1000.0",
-                                border: OutlineInputBorder()),
-                            keyboardType:
-                                TextInputType.numberWithOptions(decimal: true),
+                                labelText: "Balance", hintText: "e.g. 1000.0", border: OutlineInputBorder()),
+                            keyboardType: TextInputType.numberWithOptions(decimal: true),
                             inputFormatters: [
                               // Allow only numbers and decimal point, and limit to two decimal places
-                              FilteringTextInputFormatter.allow(
-                                  RegExp(r'^-?\d*\.?\d{0,2}')),
+                              FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d{0,2}')),
                             ],
                             validator: (value) {
                               if (value == null || value.isEmpty) {
@@ -324,7 +312,7 @@ class AddAccountViewState extends State<AddAccountView> {
                       onPressed: pickIcon,
                       child: const Text('Pick Icon'),
                     ),
-                    Icon(selectedIcon, color: selectedColor),
+                    if (selectedIcon != null) Icon(selectedIcon!.data, color: selectedColor),
                   ],
                 ),
                 ElevatedButton(

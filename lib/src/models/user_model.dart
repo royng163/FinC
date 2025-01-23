@@ -9,16 +9,16 @@ class UserModel {
     this.email,
   });
 
-  factory UserModel.fromDocument(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>?;
+  factory UserModel.fromFirestore(DocumentSnapshot snapshot) {
+    final data = snapshot.data() as Map<String, dynamic>?;
 
     return UserModel(
-      userId: doc.id,
+      userId: snapshot.id,
       email: data?['email'],
     );
   }
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toFirestore() {
     return {
       'email': email,
     };

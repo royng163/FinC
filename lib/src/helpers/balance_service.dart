@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:finc/src/helpers/firestore_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:currency_converter_pro/currency_converter_pro.dart';
 import '../models/account_model.dart';
@@ -6,6 +6,7 @@ import '../models/account_model.dart';
 class BalanceService {
   final CurrencyConverterPro currencyConverter = CurrencyConverterPro();
   User? _currentUser;
+  FirestoreService firestore = FirestoreService();
 
   Future<User?> getCurrentUser() async {
     if (_currentUser == null) {
@@ -20,15 +21,9 @@ class BalanceService {
   Future<double> getTotalBalance(String baseCurrency) async {
     final User? user = await getCurrentUser();
 
-    final accountsSnapshot = await FirebaseFirestore.instance
-        .collection('Accounts')
-        .where('userId', isEqualTo: user!.uid)
-        .get();
+    List<AccountModel> fetchedAccounts = await firestore.getAccounts(user!.uid);
 
     double balance = 0.0;
-    List<AccountModel> fetchedAccounts = accountsSnapshot.docs.map((doc) {
-      return AccountModel.fromDocument(doc);
-    }).toList();
 
     for (var account in fetchedAccounts) {
       if (account.accountType == AccountType.bank ||
@@ -48,8 +43,7 @@ class BalanceService {
     return balance;
   }
 
-  Future<double> getAccountBalance(
-      Map<String, double> balances, String baseCurrency) async {
+  Future<double> getAccountBalance(Map<String, double> balances, String baseCurrency) async {
     double balance = 0.0;
     for (var entry in balances.entries) {
       var amount = await currencyConverter.convertCurrency(

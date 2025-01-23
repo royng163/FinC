@@ -19,7 +19,7 @@ class AppWrapper extends StatefulWidget {
 }
 
 class AppWrapperState extends State<AppWrapper> {
-  final int _selectedIndex = 0;
+  int _selectedIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -39,8 +39,17 @@ class AppWrapperState extends State<AppWrapper> {
           title: 'Accounts',
           icon: Icons.credit_card,
         ),
+        AdaptiveScaffoldDestination(
+          title: 'Tags',
+          icon: Icons.local_offer,
+        ),
       ],
-      onDestinationSelected: widget.navigationShell.goBranch,
+      onDestinationSelected: (index) {
+        setState(() {
+          _selectedIndex = index;
+        });
+        widget.navigationShell.goBranch(index);
+      },
     );
   }
 }

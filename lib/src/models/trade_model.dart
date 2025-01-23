@@ -19,10 +19,10 @@ class TradeModel {
     required this.tradeTime,
   });
 
-  factory TradeModel.fromDocument(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory TradeModel.fromFirestore(DocumentSnapshot snapshot) {
+    final data = snapshot.data() as Map<String, dynamic>;
     return TradeModel(
-      tradeId: doc.id,
+      tradeId: snapshot.id,
       userId: data['userId'],
       symbol: data['instructmentName'],
       position: data['quantity'],
@@ -32,7 +32,7 @@ class TradeModel {
     );
   }
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toFirestore() {
     return {
       'userId': userId,
       'instructmentName': symbol,

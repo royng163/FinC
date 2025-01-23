@@ -34,7 +34,7 @@ class MyAppState extends State<MyApp> {
       // Fetch user data from Firestore
       final doc = await authService.db.collection('Users').doc(user.uid).get();
       if (doc.exists) {
-        currentUser = UserModel.fromDocument(doc);
+        currentUser = UserModel.fromFirestore(doc);
       } else {
         // User document does not exist, sign out the user
         await authService.auth.signOut();
@@ -43,9 +43,7 @@ class MyAppState extends State<MyApp> {
     } else {
       currentUser = null;
     }
-    return AppRouter(
-        currentUser: currentUser,
-        settingsController: widget.settingsController);
+    return AppRouter(currentUser: currentUser, settingsController: widget.settingsController);
   }
 
   @override
@@ -101,8 +99,7 @@ class MyAppState extends State<MyApp> {
                 //
                 // The appTitle is defined in .arb files found in the localization
                 // directory.
-                onGenerateTitle: (BuildContext context) =>
-                    AppLocalizations.of(context)!.appTitle,
+                onGenerateTitle: (BuildContext context) => AppLocalizations.of(context)!.appTitle,
 
                 // Define a light and dark color theme. Then, read the user's
                 // preferred ThemeMode (light, dark, or system default) from the

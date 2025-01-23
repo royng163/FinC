@@ -8,7 +8,7 @@ class AccountModel {
   final AccountType accountType;
   final String accountName;
   final Map<String, double> balances;
-  final int icon;
+  final Map<String, dynamic> icon;
   final int color;
   final Timestamp createdAt;
 
@@ -23,21 +23,35 @@ class AccountModel {
     required this.createdAt,
   });
 
-  factory AccountModel.fromDocument(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory AccountModel.fromFirestore(DocumentSnapshot snapshot) {
+    final data = snapshot.data() as Map<String, dynamic>;
+
+    // Handle both old and new icon formats
+    Map<String, dynamic> iconData;
+    if (data['icon'] is int) {
+      // Old format
+      iconData = {
+        'codePoint': data['icon'],
+        'fontFamily': 'MaterialIcons', // Default font family for old icons
+      };
+    } else {
+      // New format
+      iconData = Map<String, dynamic>.from(data['icon']);
+    }
+
     return AccountModel(
-      accountId: doc.id,
+      accountId: snapshot.id,
       userId: data['userId'],
       accountType: AccountType.values[data['accountType']],
       accountName: data['accountName'],
       balances: Map<String, double>.from(data['balances']),
-      icon: data['icon'],
+      icon: iconData,
       color: data['color'],
       createdAt: data['createdAt'],
     );
   }
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toFirestore() {
     return {
       'userId': userId,
       'accountType': accountType.index,
