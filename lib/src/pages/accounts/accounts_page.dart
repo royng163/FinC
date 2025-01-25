@@ -10,6 +10,7 @@ import 'package:intl/intl.dart';
 import '../../components/app_routes.dart';
 import '../../components/settings_controller.dart';
 import '../../models/tag_model.dart';
+import '../home/edit_transaction_view.dart';
 import 'edit_account_view.dart';
 import '../../models/account_model.dart';
 import '../../models/transaction_model.dart';
@@ -258,6 +259,19 @@ class AccountsPageState extends State<AccountsPage> {
                                   ),
                                 ],
                               ),
+                              onTap: () async {
+                                final result = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => EditTransactionView(
+                                      transaction: transaction,
+                                    ),
+                                  ),
+                                );
+                                if (result == true) {
+                                  fetchTransactions(accounts[selectedIndex].accountId);
+                                }
+                              },
                             );
                           },
                         ),

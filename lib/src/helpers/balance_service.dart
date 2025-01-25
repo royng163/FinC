@@ -44,7 +44,7 @@ class BalanceService {
     return balance;
   }
 
-  Future<Map<String, double>> getMonthlyStats() async {
+  Future<Map<String, double>> getMonthlyStats(String baseCurrency) async {
     final User? user = await getCurrentUser();
     final now = DateTime.now();
     final thisMonth = DateTime(now.year, now.month, 1);
@@ -54,10 +54,15 @@ class BalanceService {
     double expense = 0.0;
 
     for (var transaction in monthlyTransactions) {
+      var amount = await currencyConverter.convertCurrency(
+        amount: transaction.amount,
+        fromCurrency: transaction.currency.toLowerCase(),
+        toCurrency: baseCurrency.toLowerCase(),
+      );
       if (transaction.transactionType == TransactionType.income) {
-        income += transaction.amount;
+        income += amount;
       } else if (transaction.transactionType == TransactionType.expense) {
-        expense += transaction.amount;
+        expense += amount;
       }
     }
 

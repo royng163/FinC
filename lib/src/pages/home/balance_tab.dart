@@ -68,7 +68,7 @@ class BalanceTabState extends State<BalanceTab> {
 
   Future<void> fetchMonthlyTransactions() async {
     try {
-      final result = await balanceService.getMonthlyStats();
+      final result = await balanceService.getMonthlyStats(widget.settingsController.baseCurrency);
       setState(() {
         totalIncome = result['income']!;
         totalExpense = result['expense']!;
