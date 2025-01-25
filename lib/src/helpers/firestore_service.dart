@@ -164,6 +164,26 @@ class FirestoreService {
     return TransactionModel.fromFirestore(snapshot);
   }
 
+  Future<List<TransactionModel>> getMonthlyTransactions(String userId, DateTime thisMonth) async {
+    final transactionsSnapshot = await db
+        .collection('Transactions')
+        .where('userId', isEqualTo: userId)
+        .where('transactionTime', isGreaterThanOrEqualTo: Timestamp.fromDate(thisMonth))
+        .get();
+    return transactionsSnapshot.docs.map((doc) => TransactionModel.fromFirestore(doc)).toList();
+  }
+
+  Future<List<TransactionModel>> getAccountTransactions(String userId, String accountId) async {
+    final transactionsSnapshot = await db
+        .collection('Transactions')
+        .where('userId', isEqualTo: userId)
+        .where('accountId', isEqualTo: accountId)
+        .orderBy('transactionTime', descending: true)
+        .get();
+
+    return transactionsSnapshot.docs.map((doc) => TransactionModel.fromFirestore(doc)).toList();
+  }
+
   // Tag Collection
   Future<void> setTag(TagModel tag) {
     return db.collection('Tags').doc(tag.tagId).set(tag.toFirestore());

@@ -26,26 +26,13 @@ class AccountModel {
   factory AccountModel.fromFirestore(DocumentSnapshot snapshot) {
     final data = snapshot.data() as Map<String, dynamic>;
 
-    // Handle both old and new icon formats
-    Map<String, dynamic> iconData;
-    if (data['icon'] is int) {
-      // Old format
-      iconData = {
-        'codePoint': data['icon'],
-        'fontFamily': 'MaterialIcons', // Default font family for old icons
-      };
-    } else {
-      // New format
-      iconData = Map<String, dynamic>.from(data['icon']);
-    }
-
     return AccountModel(
       accountId: snapshot.id,
       userId: data['userId'],
       accountType: AccountType.values[data['accountType']],
       accountName: data['accountName'],
       balances: Map<String, double>.from(data['balances']),
-      icon: iconData,
+      icon: Map<String, dynamic>.from(data['icon']),
       color: data['color'],
       createdAt: data['createdAt'],
     );

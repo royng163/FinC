@@ -22,25 +22,12 @@ class TagModel {
   factory TagModel.fromFirestore(DocumentSnapshot snapshot) {
     final data = snapshot.data() as Map<String, dynamic>;
 
-    // Handle both old and new icon formats
-    Map<String, dynamic> iconData;
-    if (data['icon'] is int) {
-      // Old format
-      iconData = {
-        'codePoint': data['icon'],
-        'fontFamily': 'MaterialIcons', // Default font family for old icons
-      };
-    } else {
-      // New format
-      iconData = Map<String, dynamic>.from(data['icon']);
-    }
-
     return TagModel(
       tagId: snapshot.id,
       userId: data['userId'],
       tagName: data['tagName'],
       tagType: TagType.values[data['tagType']],
-      icon: iconData,
+      icon: Map<String, dynamic>.from(data['icon']),
       color: data['color'],
     );
   }

@@ -2,6 +2,7 @@ import 'package:finc/src/helpers/firestore_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:currency_converter_pro/currency_converter_pro.dart';
 import '../models/account_model.dart';
+import '../models/transaction_model.dart';
 
 class BalanceService {
   final CurrencyConverterPro currencyConverter = CurrencyConverterPro();
@@ -41,6 +42,29 @@ class BalanceService {
     }
 
     return balance;
+  }
+
+  Future<Map<String, double>> getMonthlyStats() async {
+    final User? user = await getCurrentUser();
+    final now = DateTime.now();
+    final thisMonth = DateTime(now.year, now.month, 1);
+    List<TransactionModel> monthlyTransactions = await firestore.getMonthlyTransactions(user!.uid, thisMonth);
+
+    double income = 0.0;
+    double expense = 0.0;
+
+    for (var transaction in monthlyTransactions) {
+      if (transaction.transactionType == TransactionType.income) {
+        income += transaction.amount;
+      } else if (transaction.transactionType == TransactionType.expense) {
+        expense += transaction.amount;
+      }
+    }
+
+    return {
+      'income': income,
+      'expense': expense,
+    };
   }
 
   Future<double> getAccountBalance(Map<String, double> balances, String baseCurrency) async {

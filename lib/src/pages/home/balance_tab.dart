@@ -34,13 +34,12 @@ class BalanceTabState extends State<BalanceTab> {
   DocumentSnapshot? lastDocument;
   final int pageSize = 10;
   final ScrollController scrollController = ScrollController();
-  late BalanceService balanceService;
-  FirestoreService firestore = FirestoreService();
+  final BalanceService balanceService = BalanceService();
+  final FirestoreService firestore = FirestoreService();
 
   @override
   void initState() {
     super.initState();
-    balanceService = BalanceService();
     fetchTotalBalance();
     fetchMonthlyTransactions();
     fetchAccounts();
@@ -69,31 +68,10 @@ class BalanceTabState extends State<BalanceTab> {
 
   Future<void> fetchMonthlyTransactions() async {
     try {
-      final User? user = FirebaseAuth.instance.currentUser;
-      final transactionsSnapshot =
-          await FirebaseFirestore.instance.collection('Transactions').where('userId', isEqualTo: user?.uid).get();
-
-      double income = 0.0;
-      double expense = 0.0;
-      final now = DateTime.now();
-      final currentMonth = DateTime(now.year, now.month, 1);
-
-      for (var doc in transactionsSnapshot.docs) {
-        final transaction = TransactionModel.fromFirestore(doc);
-        final transactionDate = transaction.transactionTime.toDate();
-
-        if (transactionDate.isAfter(currentMonth)) {
-          if (transaction.transactionType == TransactionType.income) {
-            income += transaction.amount;
-          } else if (transaction.transactionType == TransactionType.expense) {
-            expense += transaction.amount;
-          }
-        }
-      }
-
+      final result = await balanceService.getMonthlyStats();
       setState(() {
-        totalIncome = income;
-        totalExpense = expense;
+        totalIncome = result['income']!;
+        totalExpense = result['expense']!;
       });
     } catch (e) {
       if (!mounted) return;
