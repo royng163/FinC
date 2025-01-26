@@ -15,6 +15,8 @@ class HomePage extends StatefulWidget {
 }
 
 class HomePageState extends State<HomePage> {
+  BalanceTabState? balanceTabState;
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -40,9 +42,33 @@ class HomePageState extends State<HomePage> {
             ],
           ),
         ),
+        floatingActionButton: Builder(
+          builder: (BuildContext context) {
+            return FloatingActionButton(
+              onPressed: () async {
+                switch (DefaultTabController.of(context).index) {
+                  case 0:
+                    final result = await context.push(
+                      '${AppRoutes.home}${AppRoutes.addTransaction}',
+                    );
+                    if (result == true) {
+                      balanceTabState?.refreshData();
+                    }
+                    break;
+                  case 1:
+                    break;
+                }
+              },
+              child: const Icon(Icons.add),
+            );
+          },
+        ),
         body: TabBarView(
           children: <Widget>[
-            BalanceTab(settingsController: widget.settingsController),
+            BalanceTab(
+              settingsController: widget.settingsController,
+              registerState: (state) => balanceTabState = state,
+            ),
             portfolioView(),
           ],
         ),

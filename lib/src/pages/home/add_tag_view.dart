@@ -68,7 +68,7 @@ class AddTagViewState extends State<AddTagView> {
         selectedColor = Colors.grey;
       });
 
-      Navigator.pop(context);
+      Navigator.pop(context, true);
     } catch (e) {
       // Handle errors gracefully
       ScaffoldMessenger.of(context).showSnackBar(

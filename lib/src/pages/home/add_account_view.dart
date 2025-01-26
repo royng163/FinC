@@ -116,7 +116,7 @@ class AddAccountViewState extends State<AddAccountView> {
         selectedAccountType = AccountType.bank;
       });
 
-      Navigator.pop(context);
+      Navigator.pop(context, true);
     } catch (e) {
       // Handle errors gracefully
       ScaffoldMessenger.of(context).showSnackBar(

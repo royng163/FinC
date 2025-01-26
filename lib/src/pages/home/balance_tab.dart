@@ -11,12 +11,12 @@ import 'package:intl/intl.dart';
 import '../../components/app_routes.dart';
 import '../../components/settings_controller.dart';
 import '../../models/transaction_model.dart';
-import 'edit_transaction_view.dart';
 
 class BalanceTab extends StatefulWidget {
   final SettingsController settingsController;
+  final Function(BalanceTabState) registerState;
 
-  const BalanceTab({super.key, required this.settingsController});
+  const BalanceTab({super.key, required this.settingsController, required this.registerState});
 
   @override
   BalanceTabState createState() => BalanceTabState();
@@ -40,6 +40,7 @@ class BalanceTabState extends State<BalanceTab> {
   @override
   void initState() {
     super.initState();
+    widget.registerState(this);
     fetchTotalBalance();
     fetchMonthlyTransactions();
     fetchAccounts();
@@ -171,6 +172,15 @@ class BalanceTabState extends State<BalanceTab> {
     }
   }
 
+  Future<void> refreshData() async {
+    fetchTotalBalance();
+    fetchMonthlyTransactions();
+    transactions.clear();
+    lastDocument = null;
+    hasMore = true;
+    fetchTransactions();
+  }
+
   @override
   void dispose() {
     scrollController.dispose();
@@ -196,171 +206,150 @@ class BalanceTabState extends State<BalanceTab> {
       items.addAll(transactions); // Add transactions for that date
     });
 
-    return Column(
-      children: [
-        Card(
-          color: Theme.of(context).cardColor,
-          surfaceTintColor: Theme.of(context).primaryColor,
-          margin: const EdgeInsets.all(8),
-          elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              // crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Column(
-                  children: [
-                    const Text(
-                      'Total Balance',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      totalBalance.toStringAsFixed(2),
-                      style: const TextStyle(fontSize: 24),
-                    ),
-                  ],
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    Column(
-                      children: [
-                        const Text(
-                          'Income',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          totalIncome.toStringAsFixed(2),
-                          style: const TextStyle(fontSize: 20),
-                        ),
-                      ],
-                    ),
-                    Column(
-                      children: [
-                        const Text(
-                          'Expense',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          totalExpense.toStringAsFixed(2),
-                          style: const TextStyle(fontSize: 20),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            ElevatedButton(
-              onPressed: () {
-                context.push(AppRoutes.nestedAddAccount);
-              },
-              child: const Text('Add Account'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                context.push(AppRoutes.nestedAddTag);
-              },
-              child: const Text('Add Tag'),
-            ),
-          ],
-        ),
-        const Row(
-          children: [
-            Text("Transactions", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        Expanded(
-          child: ListView.builder(
-            controller: scrollController,
-            itemCount: items.length + (hasMore ? 1 : 0),
-            itemBuilder: (BuildContext context, int index) {
-              if (index == items.length) {
-                return isLoading ? const Center(child: CircularProgressIndicator()) : const SizedBox.shrink();
-              }
-
-              final item = items[index];
-              if (item is String) {
-                // Date header
-                return Container(
-                    color: Theme.of(context).splashColor, child: Text(item, style: const TextStyle(fontSize: 16)));
-              } else if (item is TransactionModel) {
-                final transaction = item;
-                final transactionTags = transaction.tags.map((tagId) => tags[tagId]).toList();
-                // Retrieve account information using accountId
-                final account = accounts.firstWhere((account) => account.accountId == transaction.accountId,
-                    orElse: () => throw StateError('No account found for accountId: ${transaction.accountId}'));
-                final accountTag = TagModel(
-                  tagId: "",
-                  userId: "",
-                  tagName: account.accountName,
-                  tagType: TagType.methods,
-                  icon: account.icon,
-                  color: account.color,
-                );
-                // Prepend the new tag object to the transactionTags list
-                transactionTags.insert(0, accountTag);
-                return ListTile(
-                  title: Text(transaction.transactionName, style: TextStyle(fontSize: 16)),
-                  subtitle: Wrap(
-                    children: transactionTags
-                        .map((tag) => Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 3.0, vertical: 1.0),
-                              margin: const EdgeInsets.only(top: 4.0, right: 4.0),
-                              decoration: BoxDecoration(
-                                color: Color(tag!.color).withAlpha(100),
-                                borderRadius: BorderRadius.circular(5.0),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    deserializeIcon(tag.icon)?.data,
-                                    size: 14,
-                                    color: Color(tag.color),
-                                  ),
-                                  const SizedBox(width: 4.0),
-                                  Text(
-                                    tag.tagName,
-                                    style: const TextStyle(fontSize: 14),
-                                  ),
-                                ],
-                              ),
-                            ))
-                        .toList(),
-                  ),
-                  trailing: Text(
-                    '${transaction.amount} ${transaction.currency}',
-                    style: const TextStyle(fontSize: 18),
-                  ),
-                  onTap: () async {
-                    final result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => EditTransactionView(
-                          transaction: transaction,
-                        ),
+    return Scaffold(
+      body: Column(
+        children: [
+          Card(
+            color: Theme.of(context).cardColor,
+            surfaceTintColor: Theme.of(context).primaryColor,
+            margin: const EdgeInsets.all(8),
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                // crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Column(
+                    children: [
+                      const Text(
+                        'Total Balance',
+                        style: TextStyle(fontWeight: FontWeight.bold),
                       ),
-                    );
-                    if (result == true) {
-                      fetchTotalBalance();
-                      fetchMonthlyTransactions();
-                      fetchAccounts();
-                    }
-                  },
-                );
-              }
-              return const SizedBox.shrink();
-            },
+                      Text(
+                        totalBalance.toStringAsFixed(2),
+                        style: const TextStyle(fontSize: 24),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      Column(
+                        children: [
+                          const Text(
+                            'Income',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            totalIncome.toStringAsFixed(2),
+                            style: const TextStyle(fontSize: 20),
+                          ),
+                        ],
+                      ),
+                      Column(
+                        children: [
+                          const Text(
+                            'Expense',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            totalExpense.toStringAsFixed(2),
+                            style: const TextStyle(fontSize: 20),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-      ],
+          const Row(
+            children: [
+              Text("Transactions", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          Expanded(
+            child: ListView.builder(
+              controller: scrollController,
+              itemCount: items.length + (hasMore ? 1 : 0),
+              itemBuilder: (BuildContext context, int index) {
+                if (index == items.length) {
+                  return isLoading ? const Center(child: CircularProgressIndicator()) : const SizedBox.shrink();
+                }
+
+                final item = items[index];
+                if (item is String) {
+                  // Date header
+                  return Container(
+                      color: Theme.of(context).splashColor, child: Text(item, style: const TextStyle(fontSize: 16)));
+                } else if (item is TransactionModel) {
+                  final transaction = item;
+                  final transactionTags = transaction.tags.map((tagId) => tags[tagId]).toList();
+                  // Retrieve account information using accountId
+                  final account = accounts.firstWhere((account) => account.accountId == transaction.accountId,
+                      orElse: () => throw StateError('No account found for accountId: ${transaction.accountId}'));
+                  final accountTag = TagModel(
+                    tagId: "",
+                    userId: "",
+                    tagName: account.accountName,
+                    tagType: TagType.methods,
+                    icon: account.icon,
+                    color: account.color,
+                  );
+                  // Prepend the new tag object to the transactionTags list
+                  transactionTags.insert(0, accountTag);
+                  return ListTile(
+                    title: Text(transaction.transactionName, style: TextStyle(fontSize: 16)),
+                    subtitle: Wrap(
+                      children: transactionTags
+                          .map((tag) => Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 3.0, vertical: 1.0),
+                                margin: const EdgeInsets.only(top: 4.0, right: 4.0),
+                                decoration: BoxDecoration(
+                                  color: Color(tag!.color).withAlpha(100),
+                                  borderRadius: BorderRadius.circular(5.0),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      deserializeIcon(tag.icon)?.data,
+                                      size: 14,
+                                      color: Color(tag.color),
+                                    ),
+                                    const SizedBox(width: 4.0),
+                                    Text(
+                                      tag.tagName,
+                                      style: const TextStyle(fontSize: 14),
+                                    ),
+                                  ],
+                                ),
+                              ))
+                          .toList(),
+                    ),
+                    trailing: Text(
+                      '${transaction.amount} ${transaction.currency}',
+                      style: const TextStyle(fontSize: 18),
+                    ),
+                    onTap: () async {
+                      final result = await context.push(
+                        '${AppRoutes.home}${AppRoutes.editTransaction}',
+                        extra: transaction,
+                      );
+                      if (result == true) {
+                        refreshData();
+                      }
+                    },
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

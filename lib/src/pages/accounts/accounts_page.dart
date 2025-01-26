@@ -10,8 +10,6 @@ import 'package:intl/intl.dart';
 import '../../components/app_routes.dart';
 import '../../components/settings_controller.dart';
 import '../../models/tag_model.dart';
-import '../home/edit_transaction_view.dart';
-import 'edit_account_view.dart';
 import '../../models/account_model.dart';
 import '../../models/transaction_model.dart';
 
@@ -128,6 +126,17 @@ class AccountsPageState extends State<AccountsPage> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final result = await context.push(
+            '${AppRoutes.accounts}${AppRoutes.addAccount}',
+          );
+          if (result == true) {
+            fetchAccounts();
+          }
+        },
+        child: const Icon(Icons.add),
+      ),
       body: isLoadingAccounts
           ? const Center(child: CircularProgressIndicator())
           : Column(
@@ -154,13 +163,9 @@ class AccountsPageState extends State<AccountsPage> {
                           double accountBalance = snapshot.data ?? 0.0;
                           return GestureDetector(
                             onTap: () async {
-                              final result = await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => EditAccountView(
-                                    account: account,
-                                  ),
-                                ),
+                              final result = await context.push(
+                                '${AppRoutes.accounts}${AppRoutes.editAccount}',
+                                extra: account,
                               );
                               if (result == true) {
                                 fetchAccounts();
@@ -260,13 +265,9 @@ class AccountsPageState extends State<AccountsPage> {
                                 ],
                               ),
                               onTap: () async {
-                                final result = await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => EditTransactionView(
-                                      transaction: transaction,
-                                    ),
-                                  ),
+                                final result = await context.push(
+                                  '${AppRoutes.accounts}${AppRoutes.editTransaction}',
+                                  extra: transaction,
                                 );
                                 if (result == true) {
                                   fetchTransactions(accounts[selectedIndex].accountId);

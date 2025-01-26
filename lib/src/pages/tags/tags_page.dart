@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_iconpicker/flutter_iconpicker.dart';
+import 'package:go_router/go_router.dart';
+import '../../components/app_routes.dart';
 import '../../models/tag_model.dart';
 import '../../helpers/firestore_service.dart';
-import 'edit_tag_view.dart'; // Import the EditTagView
 
 class TagsPage extends StatefulWidget {
   const TagsPage({super.key});
@@ -44,6 +45,15 @@ class TagsPageState extends State<TagsPage> {
       appBar: AppBar(
         title: Text('Tags'),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final result = await context.push('${AppRoutes.tags}${AppRoutes.addTag}');
+          if (result == true) {
+            fetchTags(); // Refresh the tags list after adding a new tag
+          }
+        },
+        child: const Icon(Icons.add),
+      ),
       body: ListView.builder(
         itemCount: tags.length,
         itemBuilder: (context, index) {
@@ -54,11 +64,9 @@ class TagsPageState extends State<TagsPage> {
             trailing: IconButton(
               icon: Icon(Icons.edit),
               onPressed: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => EditTagView(tag: tag),
-                  ),
+                final result = await context.push(
+                  '${AppRoutes.tags}${AppRoutes.editTag}',
+                  extra: tag,
                 );
 
                 if (result == true) {

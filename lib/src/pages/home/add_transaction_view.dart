@@ -123,7 +123,7 @@ class AddTransactionViewState extends State<AddTransactionView> {
         SnackBar(content: Text(response)),
       );
 
-      Navigator.pop(context);
+      Navigator.pop(context, true);
     } catch (e) {
       // Handle errors gracefully
       ScaffoldMessenger.of(context).showSnackBar(
