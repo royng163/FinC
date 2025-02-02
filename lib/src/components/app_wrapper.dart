@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:adaptive_navigation/adaptive_navigation.dart';
 import 'package:go_router/go_router.dart';
+import 'app_routes.dart';
 import 'settings_controller.dart';
 
 class AppWrapper extends StatefulWidget {
@@ -25,6 +26,22 @@ class AppWrapperState extends State<AppWrapper> {
     return AdaptiveNavigationScaffold(
       body: widget.navigationShell,
       selectedIndex: _selectedIndex,
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          switch (_selectedIndex) {
+            case 0:
+              await context.push(AppRoutes.addTransaction);
+              break;
+            case 1:
+              await context.push(AppRoutes.addAccount);
+              break;
+            case 2:
+              await context.push(AppRoutes.addTag);
+              break;
+          }
+        },
+        child: const Icon(Icons.add),
+      ),
       destinations: [
         AdaptiveScaffoldDestination(
           title: 'Home',

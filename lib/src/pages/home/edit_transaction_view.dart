@@ -23,18 +23,18 @@ class EditTransactionView extends StatefulWidget {
 }
 
 class EditTransactionViewState extends State<EditTransactionView> {
+  final FirestoreService firestoreService = FirestoreService();
   final TextEditingController transactionNameController = TextEditingController();
   final TextEditingController amountController = TextEditingController();
   final TextEditingController currencyController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
   final TextEditingController transactionTimeController = TextEditingController();
-  String selectedAccount = "";
+  late TransactionType selectedTransactionType;
+  late String selectedAccount;
   String selectedDestinationAccount = "";
   List<AccountModel> accounts = [];
   List<String> selectedTags = [];
   List<TagModel> tags = [];
-  TransactionType selectedTransactionType = TransactionType.expense;
-  final FirestoreService firestore = FirestoreService();
   String response = "";
 
   @override
@@ -55,8 +55,8 @@ class EditTransactionViewState extends State<EditTransactionView> {
   Future<void> fetchDataFromFirestore() async {
     try {
       final User? user = FirebaseAuth.instance.currentUser;
-      accounts = await firestore.getAccounts(user!.uid);
-      tags = await firestore.getTags(user.uid);
+      accounts = await firestoreService.getAccounts(user!.uid);
+      tags = await firestoreService.getTags(user.uid);
 
       setState(() {});
     } catch (e) {
@@ -84,7 +84,7 @@ class EditTransactionViewState extends State<EditTransactionView> {
         throw Exception('No user is currently signed in.');
       }
 
-      final oldTransaction = await firestore.getTransaction(widget.transaction.transactionId);
+      final oldTransaction = await firestoreService.getTransaction(widget.transaction.transactionId);
 
       // Create the updated transaction
       final newTransaction = TransactionModel(
@@ -102,7 +102,7 @@ class EditTransactionViewState extends State<EditTransactionView> {
         transactionTime: Timestamp.fromDate(DateFormat('yyyy-MM-dd HH:mm').parse(transactionTimeController.text)),
       );
 
-      response = await firestore.updateTransaction(newTransaction, oldTransaction);
+      response = await firestoreService.updateTransaction(newTransaction, oldTransaction);
 
       if (!mounted) return;
 
@@ -120,7 +120,7 @@ class EditTransactionViewState extends State<EditTransactionView> {
 
   Future<void> deleteTransaction() async {
     try {
-      response = await firestore.deleteTransaction(widget.transaction);
+      response = await firestoreService.deleteTransaction(widget.transaction);
 
       if (!mounted) return;
 

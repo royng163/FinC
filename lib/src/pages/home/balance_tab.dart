@@ -335,7 +335,7 @@ class BalanceTabState extends State<BalanceTab> {
                     ),
                     onTap: () async {
                       final result = await context.push(
-                        '${AppRoutes.home}${AppRoutes.editTransaction}',
+                        AppRoutes.editTransaction,
                         extra: transaction,
                       );
                       if (result == true) {

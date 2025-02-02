@@ -20,6 +20,7 @@ class AddAccountView extends StatefulWidget {
 }
 
 class AddAccountViewState extends State<AddAccountView> {
+  final FirestoreService firestoreService = FirestoreService();
   final TextEditingController accountNameController = TextEditingController();
   final List<TextEditingController> balanceControllers = [];
   final List<TextEditingController> currencyControllers = [];
@@ -27,12 +28,9 @@ class AddAccountViewState extends State<AddAccountView> {
   IconPickerIcon? selectedIcon;
   AccountType selectedAccountType = AccountType.bank;
 
-  late FirestoreService firestore;
-
   @override
   void initState() {
     super.initState();
-    firestore = FirestoreService();
     addCurrencyField(widget.settingsController.baseCurrency, '0.0');
   }
 
@@ -74,7 +72,7 @@ class AddAccountViewState extends State<AddAccountView> {
       }
 
       final String userId = user.uid;
-      final String accountId = firestore.db.collection('Accounts').doc().id;
+      final String accountId = firestoreService.firestore.collection('Accounts').doc().id;
 
       final Map<String, double> balances = {};
       for (int i = 0; i < currencyControllers.length; i++) {
@@ -94,7 +92,7 @@ class AddAccountViewState extends State<AddAccountView> {
         createdAt: Timestamp.now(),
       );
 
-      await firestore.setAccount(account);
+      await firestoreService.setAccount(account);
 
       if (!mounted) return;
 

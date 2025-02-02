@@ -26,7 +26,7 @@ class TagsPageState extends State<TagsPage> {
   Future<void> fetchTags() async {
     try {
       final User? user = FirebaseAuth.instance.currentUser;
-      final tagsSnapshot = await firestore.db.collection('Tags').where('userId', isEqualTo: user?.uid).get();
+      final tagsSnapshot = await firestore.firestore.collection('Tags').where('userId', isEqualTo: user?.uid).get();
 
       setState(() {
         tags = tagsSnapshot.docs.map((doc) => TagModel.fromFirestore(doc)).toList();
@@ -45,15 +45,6 @@ class TagsPageState extends State<TagsPage> {
       appBar: AppBar(
         title: Text('Tags'),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final result = await context.push('${AppRoutes.tags}${AppRoutes.addTag}');
-          if (result == true) {
-            fetchTags(); // Refresh the tags list after adding a new tag
-          }
-        },
-        child: const Icon(Icons.add),
-      ),
       body: ListView.builder(
         itemCount: tags.length,
         itemBuilder: (context, index) {
@@ -65,7 +56,7 @@ class TagsPageState extends State<TagsPage> {
               icon: Icon(Icons.edit),
               onPressed: () async {
                 final result = await context.push(
-                  '${AppRoutes.tags}${AppRoutes.editTag}',
+                  AppRoutes.editTag,
                   extra: tag,
                 );
 

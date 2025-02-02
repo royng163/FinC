@@ -21,19 +21,18 @@ class EditAccountView extends StatefulWidget {
 }
 
 class EditAccountViewState extends State<EditAccountView> {
+  late FirestoreService firestoreService;
   final TextEditingController accountNameController = TextEditingController();
   final List<TextEditingController> balanceControllers = [];
   final List<TextEditingController> currencyControllers = [];
-  Color selectedColor = Colors.grey;
-  IconPickerIcon? selectedIcon;
-  AccountType selectedAccountType = AccountType.bank;
-
-  late FirestoreService firestore;
+  late Color selectedColor;
+  late IconPickerIcon? selectedIcon;
+  late AccountType selectedAccountType;
 
   @override
   void initState() {
     super.initState();
-    firestore = FirestoreService();
+    firestoreService = FirestoreService();
     accountNameController.text = widget.account.accountName;
     selectedColor = Color(widget.account.color);
     selectedIcon = deserializeIcon(widget.account.icon);
@@ -102,7 +101,10 @@ class EditAccountViewState extends State<EditAccountView> {
         createdAt: widget.account.createdAt,
       );
 
-      await firestore.db.collection('Accounts').doc(widget.account.accountId).update(updatedAccount.toFirestore());
+      await firestoreService.firestore
+          .collection('Accounts')
+          .doc(widget.account.accountId)
+          .update(updatedAccount.toFirestore());
 
       if (!mounted) return;
 
@@ -122,7 +124,7 @@ class EditAccountViewState extends State<EditAccountView> {
 
   Future<void> deleteAccount() async {
     try {
-      await firestore.db.collection('Accounts').doc(widget.account.accountId).delete();
+      await firestoreService.firestore.collection('Accounts').doc(widget.account.accountId).delete();
 
       if (!mounted) return;
 

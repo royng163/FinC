@@ -14,18 +14,11 @@ class AddTagView extends StatefulWidget {
 }
 
 class AddTagViewState extends State<AddTagView> {
+  final FirestoreService firestoreService = FirestoreService();
   final TextEditingController tagNameController = TextEditingController();
   Color selectedColor = Colors.grey;
   IconPickerIcon? selectedIcon;
   TagType selectedTagType = TagType.categories;
-
-  late FirestoreService firestore;
-
-  @override
-  void initState() {
-    super.initState();
-    firestore = FirestoreService();
-  }
 
   @override
   void dispose() {
@@ -41,7 +34,7 @@ class AddTagViewState extends State<AddTagView> {
       }
 
       final String userId = user.uid;
-      final String categoryId = firestore.db.collection('Categories').doc().id;
+      final String categoryId = firestoreService.firestore.collection('Categories').doc().id;
 
       final TagModel category = TagModel(
         tagId: categoryId,
@@ -52,7 +45,7 @@ class AddTagViewState extends State<AddTagView> {
         color: selectedColor.value,
       );
 
-      await firestore.setTag(category);
+      await firestoreService.setTag(category);
 
       if (!mounted) return;
 

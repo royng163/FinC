@@ -40,44 +40,18 @@ class AppRouter {
           branches: [
             StatefulShellBranch(routes: [
               GoRoute(
-                  path: AppRoutes.home,
-                  builder: (context, state) => HomePage(settingsController: settingsController),
-                  routes: [
-                    GoRoute(
-                      path: AppRoutes.addTransaction,
-                      builder: (context, state) => AddTransactionView(settingsController: settingsController),
-                    ),
-                    GoRoute(
-                        path: AppRoutes.editTransaction,
-                        builder: (context, state) => EditTransactionView(transaction: state.extra as TransactionModel)),
-                  ]),
+                path: AppRoutes.home,
+                builder: (context, state) => HomePage(settingsController: settingsController),
+              )
             ]),
             StatefulShellBranch(routes: [
               GoRoute(
-                  path: AppRoutes.accounts,
-                  builder: (context, state) => AccountsPage(settingsController: settingsController),
-                  routes: [
-                    GoRoute(
-                      path: AppRoutes.addAccount,
-                      builder: (context, state) => AddAccountView(settingsController: settingsController),
-                    ),
-                    GoRoute(
-                        path: AppRoutes.editAccount,
-                        builder: (context, state) => EditAccountView(account: state.extra as AccountModel)),
-                    GoRoute(
-                        path: AppRoutes.editTransaction,
-                        builder: (context, state) => EditTransactionView(transaction: state.extra as TransactionModel)),
-                  ]),
+                path: AppRoutes.accounts,
+                builder: (context, state) => AccountsPage(settingsController: settingsController),
+              ),
             ]),
             StatefulShellBranch(routes: [
-              GoRoute(path: AppRoutes.tags, builder: (context, state) => TagsPage(), routes: [
-                GoRoute(
-                  path: AppRoutes.addTag,
-                  builder: (context, state) => AddTagView(),
-                ),
-                GoRoute(
-                    path: AppRoutes.editTag, builder: (context, state) => EditTagView(tag: state.extra as TagModel)),
-              ]),
+              GoRoute(path: AppRoutes.tags, builder: (context, state) => TagsPage()),
             ]),
           ]),
       GoRoute(
@@ -88,6 +62,28 @@ class AppRouter {
         path: AppRoutes.settings,
         builder: (context, state) => SettingsPage(controller: settingsController),
       ),
+      GoRoute(
+        path: AppRoutes.addTransaction,
+        builder: (context, state) => AddTransactionView(settingsController: settingsController),
+      ),
+      GoRoute(
+          path: AppRoutes.editTransaction,
+          builder: (context, state) => EditTransactionView(transaction: state.extra as TransactionModel)),
+      GoRoute(
+        path: AppRoutes.addAccount,
+        builder: (context, state) => AddAccountView(settingsController: settingsController),
+      ),
+      GoRoute(
+          path: AppRoutes.editAccount,
+          builder: (context, state) => EditAccountView(account: state.extra as AccountModel)),
+      GoRoute(
+          path: AppRoutes.editTransaction,
+          builder: (context, state) => EditTransactionView(transaction: state.extra as TransactionModel)),
+      GoRoute(
+        path: AppRoutes.addTag,
+        builder: (context, state) => AddTagView(),
+      ),
+      GoRoute(path: AppRoutes.editTag, builder: (context, state) => EditTagView(tag: state.extra as TagModel)),
     ],
   );
 }

@@ -42,27 +42,6 @@ class HomePageState extends State<HomePage> {
             ],
           ),
         ),
-        floatingActionButton: Builder(
-          builder: (BuildContext context) {
-            return FloatingActionButton(
-              onPressed: () async {
-                switch (DefaultTabController.of(context).index) {
-                  case 0:
-                    final result = await context.push(
-                      '${AppRoutes.home}${AppRoutes.addTransaction}',
-                    );
-                    if (result == true) {
-                      balanceTabState?.refreshData();
-                    }
-                    break;
-                  case 1:
-                    break;
-                }
-              },
-              child: const Icon(Icons.add),
-            );
-          },
-        ),
         body: TabBarView(
           children: <Widget>[
             BalanceTab(

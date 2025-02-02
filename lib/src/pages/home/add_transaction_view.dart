@@ -21,19 +21,18 @@ class AddTransactionView extends StatefulWidget {
 }
 
 class AddTransactionViewState extends State<AddTransactionView> {
+  final FirestoreService firestoreService = FirestoreService();
+  final TextEditingController transactionNameController = TextEditingController();
+  final TextEditingController amountController = TextEditingController();
+  final TextEditingController currencyController = TextEditingController();
+  final TextEditingController descriptionController = TextEditingController();
+  final TextEditingController transactionTimeController = TextEditingController();
   TransactionType selectedTransactionType = TransactionType.expense;
   String selectedAccount = "";
   String selectedDestinationAccount = "";
   List<AccountModel> accounts = [];
   List<String> selectedTags = [];
   List<TagModel> tags = [];
-  final TextEditingController transactionNameController = TextEditingController();
-  final TextEditingController amountController = TextEditingController();
-  final TextEditingController currencyController = TextEditingController();
-  final TextEditingController descriptionController = TextEditingController();
-  final TextEditingController transactionTimeController = TextEditingController();
-
-  final FirestoreService firestore = FirestoreService();
 
   @override
   void initState() {
@@ -47,8 +46,8 @@ class AddTransactionViewState extends State<AddTransactionView> {
   Future<void> fetchDataFromFirestore() async {
     try {
       final User? user = FirebaseAuth.instance.currentUser;
-      accounts = await firestore.getAccounts(user!.uid);
-      tags = await firestore.getTags(user.uid);
+      accounts = await firestoreService.getAccounts(user!.uid);
+      tags = await firestoreService.getTags(user.uid);
 
       setState(() {});
     } catch (e) {
@@ -100,7 +99,7 @@ class AddTransactionViewState extends State<AddTransactionView> {
       }
 
       final TransactionModel newTransaction = TransactionModel(
-        transactionId: firestore.db.collection('Transactions').doc().id,
+        transactionId: firestoreService.firestore.collection('Transactions').doc().id,
         userId: user.uid,
         accountId: selectedAccount,
         tags: selectedTags,
@@ -114,7 +113,7 @@ class AddTransactionViewState extends State<AddTransactionView> {
         transactionTime: Timestamp.fromDate(DateFormat('yyyy-MM-dd HH:mm').parse(transactionTimeController.text)),
       );
 
-      response = await firestore.setTransaction(newTransaction);
+      response = await firestoreService.setTransaction(newTransaction);
 
       if (!mounted) return;
 

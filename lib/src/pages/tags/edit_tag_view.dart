@@ -16,12 +16,11 @@ class EditTagView extends StatefulWidget {
 }
 
 class EditTagViewState extends State<EditTagView> {
+  final FirestoreService firestoreService = FirestoreService();
   final TextEditingController tagNameController = TextEditingController();
   late Color selectedColor;
-  IconPickerIcon? selectedIcon;
+  late IconPickerIcon? selectedIcon;
   late TagType selectedTagType;
-
-  final FirestoreService firestore = FirestoreService();
 
   @override
   void initState() {
@@ -56,7 +55,7 @@ class EditTagViewState extends State<EditTagView> {
         color: selectedColor.value,
       );
 
-      await firestore.setTag(updatedTag);
+      await firestoreService.setTag(updatedTag);
 
       if (!mounted) return;
 

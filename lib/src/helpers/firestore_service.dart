@@ -6,30 +6,37 @@ import '../models/transaction_model.dart';
 import '../models/tag_model.dart';
 
 class FirestoreService {
-  final FirebaseFirestore db = FirebaseFirestore.instance;
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+  FirestoreService() {
+    firestore.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    );
+  }
 
   // Users Collection
   Future<void> setUser(UserModel user) {
-    return db.collection('Users').doc(user.userId).set(user.toFirestore());
+    return firestore.collection('Users').doc(user.userId).set(user.toFirestore());
   }
 
   Future<UserModel> getUser(String userId) async {
-    final snapshot = await db.collection('Users').doc(userId).get();
+    final snapshot = await firestore.collection('Users').doc(userId).get();
     return UserModel.fromFirestore(snapshot);
   }
 
   // Accounts Collection
   Future<void> setAccount(AccountModel account) {
-    return db.collection('Accounts').doc(account.accountId).set(account.toFirestore());
+    return firestore.collection('Accounts').doc(account.accountId).set(account.toFirestore());
   }
 
   Future<AccountModel> getAccount(String accountId) async {
-    final snapshot = await db.collection('Accounts').doc(accountId).get();
+    final snapshot = await firestore.collection('Accounts').doc(accountId).get();
     return AccountModel.fromFirestore(snapshot);
   }
 
   Future<List<AccountModel>> getAccounts(String userId) async {
-    final accountsSnapshot = await db.collection('Accounts').where('userId', isEqualTo: userId).get();
+    final accountsSnapshot = await firestore.collection('Accounts').where('userId', isEqualTo: userId).get();
     return accountsSnapshot.docs.map((doc) => AccountModel.fromFirestore(doc)).toList();
   }
 
@@ -41,7 +48,7 @@ class FirestoreService {
     }
 
     try {
-      await db.collection('Transactions').doc(transaction.transactionId).set(transaction.toFirestore());
+      await firestore.collection('Transactions').doc(transaction.transactionId).set(transaction.toFirestore());
 
       // Update the account balance according to the currency
       final transactionAccount = await getAccount(transaction.accountId);
@@ -61,7 +68,7 @@ class FirestoreService {
           newBalance -= transaction.amount;
           destinationNewBalance += transaction.amount;
           destinationAccount.balances[transaction.currency] = destinationNewBalance;
-          await db
+          await firestore
               .collection('Accounts')
               .doc(transaction.transactionName)
               .update({'balances': destinationAccount.balances});
@@ -72,7 +79,10 @@ class FirestoreService {
 
       // Update the balances map
       transactionAccount.balances[transaction.currency] = newBalance;
-      await db.collection('Accounts').doc(transaction.accountId).update({'balances': transactionAccount.balances});
+      await firestore
+          .collection('Accounts')
+          .doc(transaction.accountId)
+          .update({'balances': transactionAccount.balances});
       return "Transaction added successfully!";
     } catch (e) {
       return "Failed to add transaction: $e";
@@ -99,7 +109,7 @@ class FirestoreService {
           oldBalance += oldTransaction.amount;
           destinationBalance -= oldTransaction.amount;
           destinationAccount.balances[oldTransaction.currency] = destinationBalance;
-          await db
+          await firestore
               .collection('Accounts')
               .doc(oldTransaction.transactionName)
               .update({'balances': destinationAccount.balances});
@@ -109,7 +119,7 @@ class FirestoreService {
           break;
       }
       oldAccount.balances[oldTransaction.currency] = oldBalance;
-      await db.collection('Accounts').doc(oldTransaction.accountId).update({'balances': oldAccount.balances});
+      await firestore.collection('Accounts').doc(oldTransaction.accountId).update({'balances': oldAccount.balances});
 
       // Apply the new transaction's effect
       await setTransaction(newTransaction);
@@ -139,7 +149,7 @@ class FirestoreService {
           balance += transaction.amount;
           destinationBalance -= transaction.amount;
           destinationAccount.balances[transaction.currency] = destinationBalance;
-          await db
+          await firestore
               .collection('Accounts')
               .doc(transaction.transactionName)
               .update({'balances': destinationAccount.balances});
@@ -149,10 +159,10 @@ class FirestoreService {
           break;
       }
       account.balances[transaction.currency] = balance;
-      await db.collection('Accounts').doc(transaction.accountId).update({'balances': account.balances});
+      await firestore.collection('Accounts').doc(transaction.accountId).update({'balances': account.balances});
 
       // Delete the transaction from Firestore
-      await db.collection('Transactions').doc(transaction.transactionId).delete();
+      await firestore.collection('Transactions').doc(transaction.transactionId).delete();
       return "Transaction deleted successfully!";
     } catch (e) {
       return "Failed to delete transaction: $e";
@@ -160,12 +170,12 @@ class FirestoreService {
   }
 
   Future<TransactionModel> getTransaction(String transactionId) async {
-    final snapshot = await db.collection('Transactions').doc(transactionId).get();
+    final snapshot = await firestore.collection('Transactions').doc(transactionId).get();
     return TransactionModel.fromFirestore(snapshot);
   }
 
   Future<List<TransactionModel>> getMonthlyTransactions(String userId, DateTime thisMonth) async {
-    final transactionsSnapshot = await db
+    final transactionsSnapshot = await firestore
         .collection('Transactions')
         .where('userId', isEqualTo: userId)
         .where('transactionTime', isGreaterThanOrEqualTo: Timestamp.fromDate(thisMonth))
@@ -174,7 +184,7 @@ class FirestoreService {
   }
 
   Future<List<TransactionModel>> getAccountTransactions(String userId, String accountId) async {
-    final transactionsSnapshot = await db
+    final transactionsSnapshot = await firestore
         .collection('Transactions')
         .where('userId', isEqualTo: userId)
         .where('accountId', isEqualTo: accountId)
@@ -186,11 +196,11 @@ class FirestoreService {
 
   // Tag Collection
   Future<void> setTag(TagModel tag) {
-    return db.collection('Tags').doc(tag.tagId).set(tag.toFirestore());
+    return firestore.collection('Tags').doc(tag.tagId).set(tag.toFirestore());
   }
 
   Future<List<TagModel>> getTags(String userId) async {
-    final tagsSnapshot = await db.collection('Tags').where('userId', isEqualTo: userId).get();
+    final tagsSnapshot = await firestore.collection('Tags').where('userId', isEqualTo: userId).get();
     return tagsSnapshot.docs.map((doc) => TagModel.fromFirestore(doc)).toList();
   }
 }

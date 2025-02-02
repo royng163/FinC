@@ -126,17 +126,6 @@ class AccountsPageState extends State<AccountsPage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final result = await context.push(
-            '${AppRoutes.accounts}${AppRoutes.addAccount}',
-          );
-          if (result == true) {
-            fetchAccounts();
-          }
-        },
-        child: const Icon(Icons.add),
-      ),
       body: isLoadingAccounts
           ? const Center(child: CircularProgressIndicator())
           : Column(
@@ -164,7 +153,7 @@ class AccountsPageState extends State<AccountsPage> {
                           return GestureDetector(
                             onTap: () async {
                               final result = await context.push(
-                                '${AppRoutes.accounts}${AppRoutes.editAccount}',
+                                AppRoutes.editAccount,
                                 extra: account,
                               );
                               if (result == true) {
@@ -266,7 +255,7 @@ class AccountsPageState extends State<AccountsPage> {
                               ),
                               onTap: () async {
                                 final result = await context.push(
-                                  '${AppRoutes.accounts}${AppRoutes.editTransaction}',
+                                  AppRoutes.editTransaction,
                                   extra: transaction,
                                 );
                                 if (result == true) {
