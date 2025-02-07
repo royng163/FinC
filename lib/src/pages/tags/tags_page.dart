@@ -1,3 +1,4 @@
+import 'package:finc/src/helpers/authentication_service.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_iconpicker/flutter_iconpicker.dart';
@@ -15,18 +16,20 @@ class TagsPage extends StatefulWidget {
 
 class TagsPageState extends State<TagsPage> {
   final FirestoreService firestore = FirestoreService();
+  final AuthenticationService authService = AuthenticationService();
+  late User user;
   List<TagModel> tags = [];
 
   @override
   void initState() {
     super.initState();
+    user = authService.getCurrentUser();
     fetchTags();
   }
 
   Future<void> fetchTags() async {
     try {
-      final User? user = FirebaseAuth.instance.currentUser;
-      final tagsSnapshot = await firestore.firestore.collection('Tags').where('userId', isEqualTo: user?.uid).get();
+      final tagsSnapshot = await firestore.firestore.collection('Tags').where('userId', isEqualTo: user.uid).get();
 
       setState(() {
         tags = tagsSnapshot.docs.map((doc) => TagModel.fromFirestore(doc)).toList();

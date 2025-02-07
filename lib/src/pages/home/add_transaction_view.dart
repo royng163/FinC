@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_iconpicker/flutter_iconpicker.dart';
+import '../../helpers/authentication_service.dart';
 import '../../models/transaction_model.dart';
 import 'package:intl/intl.dart';
 import '../../helpers/firestore_service.dart';
@@ -22,11 +23,13 @@ class AddTransactionView extends StatefulWidget {
 
 class AddTransactionViewState extends State<AddTransactionView> {
   final FirestoreService firestoreService = FirestoreService();
+  final AuthenticationService authService = AuthenticationService();
   final TextEditingController transactionNameController = TextEditingController();
   final TextEditingController amountController = TextEditingController();
   final TextEditingController currencyController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
   final TextEditingController transactionTimeController = TextEditingController();
+  late User user;
   TransactionType selectedTransactionType = TransactionType.expense;
   String selectedAccount = "";
   String selectedDestinationAccount = "";
@@ -37,6 +40,7 @@ class AddTransactionViewState extends State<AddTransactionView> {
   @override
   void initState() {
     super.initState();
+    user = authService.getCurrentUser();
     currencyController.text = widget.settingsController.baseCurrency;
     transactionTimeController.text = DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now());
 
@@ -45,8 +49,7 @@ class AddTransactionViewState extends State<AddTransactionView> {
 
   Future<void> fetchDataFromFirestore() async {
     try {
-      final User? user = FirebaseAuth.instance.currentUser;
-      accounts = await firestoreService.getAccounts(user!.uid);
+      accounts = await firestoreService.getAccounts(user.uid);
       tags = await firestoreService.getTags(user.uid);
 
       setState(() {});
@@ -91,11 +94,6 @@ class AddTransactionViewState extends State<AddTransactionView> {
           const SnackBar(content: Text('Negative amounts are only allowed for adjustments')),
         );
         return;
-      }
-
-      final User? user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        throw Exception('No user is currently signed in.');
       }
 
       final TransactionModel newTransaction = TransactionModel(

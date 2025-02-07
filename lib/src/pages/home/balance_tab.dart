@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:finc/src/helpers/authentication_service.dart';
 import 'package:finc/src/helpers/balance_service.dart';
 import 'package:finc/src/helpers/firestore_service.dart';
 import 'package:finc/src/models/account_model.dart';
@@ -23,6 +24,12 @@ class BalanceTab extends StatefulWidget {
 }
 
 class BalanceTabState extends State<BalanceTab> {
+  final BalanceService balanceService = BalanceService();
+  final FirestoreService firestore = FirestoreService();
+  final AuthenticationService authService = AuthenticationService();
+  final ScrollController scrollController = ScrollController();
+  final int pageSize = 10;
+  late User user;
   double totalBalance = 0.0;
   double totalIncome = 0.0;
   double totalExpense = 0.0;
@@ -32,15 +39,12 @@ class BalanceTabState extends State<BalanceTab> {
   bool isLoading = false;
   bool hasMore = true;
   DocumentSnapshot? lastDocument;
-  final int pageSize = 10;
-  final ScrollController scrollController = ScrollController();
-  final BalanceService balanceService = BalanceService();
-  final FirestoreService firestore = FirestoreService();
 
   @override
   void initState() {
     super.initState();
     widget.registerState(this);
+    user = authService.getCurrentUser();
     fetchTotalBalance();
     fetchMonthlyTransactions();
     fetchAccounts();
@@ -88,8 +92,7 @@ class BalanceTabState extends State<BalanceTab> {
     });
 
     try {
-      final User? user = FirebaseAuth.instance.currentUser;
-      List<AccountModel> fetchedAccounts = await firestore.getAccounts(user!.uid);
+      List<AccountModel> fetchedAccounts = await firestore.getAccounts(user.uid);
       setState(() {
         accounts = fetchedAccounts;
         isLoading = false;
@@ -117,10 +120,9 @@ class BalanceTabState extends State<BalanceTab> {
     });
 
     try {
-      final User? user = FirebaseAuth.instance.currentUser;
       Query query = FirebaseFirestore.instance
           .collection('Transactions')
-          .where('userId', isEqualTo: user?.uid)
+          .where('userId', isEqualTo: user.uid)
           .orderBy('transactionTime', descending: true)
           .limit(pageSize);
 
@@ -158,8 +160,7 @@ class BalanceTabState extends State<BalanceTab> {
 
   Future<void> fetchTags() async {
     try {
-      final User? user = FirebaseAuth.instance.currentUser;
-      List<TagModel> fetchedTags = await firestore.getTags(user!.uid);
+      List<TagModel> fetchedTags = await firestore.getTags(user.uid);
 
       setState(() {
         tags = {for (var tag in fetchedTags) tag.tagId: tag};
@@ -179,6 +180,31 @@ class BalanceTabState extends State<BalanceTab> {
     lastDocument = null;
     hasMore = true;
     fetchTransactions();
+  }
+
+  String getTransactionName(TransactionModel transaction) {
+    // Display corresponding transaction name for transfer transactions
+    if (transaction.transactionType == TransactionType.transfer) {
+      return '${accounts.firstWhere((account) => account.accountId == transaction.accountId).accountName} to ${accounts.firstWhere((account) => account.accountId == transaction.transactionName).accountName}';
+    }
+    // Simply return the transaction name for other transaction types
+    return transaction.transactionName;
+  }
+
+  String getDisplayAmount(TransactionModel transaction) {
+    String symbol;
+    switch (transaction.transactionType) {
+      case TransactionType.expense:
+        symbol = '-';
+        break;
+      case TransactionType.transfer:
+        symbol = '⇄';
+        break;
+      default:
+        symbol = '';
+    }
+    // Display the amount in the transaction currency
+    return '$symbol${transaction.amount} ${transaction.currency}';
   }
 
   @override
@@ -301,7 +327,7 @@ class BalanceTabState extends State<BalanceTab> {
                   // Prepend the new tag object to the transactionTags list
                   transactionTags.insert(0, accountTag);
                   return ListTile(
-                    title: Text(transaction.transactionName, style: TextStyle(fontSize: 16)),
+                    title: Text(getTransactionName(transaction), style: TextStyle(fontSize: 16)),
                     subtitle: Wrap(
                       children: transactionTags
                           .map((tag) => Container(
@@ -330,7 +356,7 @@ class BalanceTabState extends State<BalanceTab> {
                           .toList(),
                     ),
                     trailing: Text(
-                      '${transaction.amount} ${transaction.currency}',
+                      getDisplayAmount(transaction),
                       style: const TextStyle(fontSize: 18),
                     ),
                     onTap: () async {

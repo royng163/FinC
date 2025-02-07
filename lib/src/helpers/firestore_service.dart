@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_model.dart';
 import '../models/account_model.dart';
 import '../models/transaction_model.dart';
@@ -9,6 +8,7 @@ class FirestoreService {
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
   FirestoreService() {
+    // Enable offline persistence and set cache size to unlimited.
     firestore.settings = const Settings(
       persistenceEnabled: true,
       cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
@@ -40,13 +40,51 @@ class FirestoreService {
     return accountsSnapshot.docs.map((doc) => AccountModel.fromFirestore(doc)).toList();
   }
 
+  Future<String> deleteAccount(String userId, String accountId, String accountName) async {
+    try {
+      final WriteBatch batch = firestore.batch();
+
+      // 1. Update transfer transactions where the destination is this account.
+      final QuerySnapshot transferSnapshot = await firestore
+          .collection('Transactions')
+          .where('userId', isEqualTo: userId)
+          .where('transactionType', isEqualTo: TransactionType.transfer.index)
+          .where('transactionName', isEqualTo: accountId)
+          .get();
+
+      for (var doc in transferSnapshot.docs) {
+        batch.update(doc.reference, {
+          'transactionType': TransactionType.expense.index,
+          'transactionName': 'To $accountName',
+        });
+      }
+
+      // 2. Delete all transactions where the account is the source.
+      final QuerySnapshot sourceSnapshot = await firestore
+          .collection('Transactions')
+          .where('userId', isEqualTo: userId)
+          .where('accountId', isEqualTo: accountId)
+          .get();
+
+      for (var doc in sourceSnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+
+      // 3. Delete the account document.
+      final DocumentReference accountRef = firestore.collection('Accounts').doc(accountId);
+      batch.delete(accountRef);
+
+      // Commit the batch.
+      await batch.commit();
+
+      return "Account deletion updates applied successfully!";
+    } catch (e) {
+      return "Failed to delete account transactions: $e";
+    }
+  }
+
   // Transactions Collection
   Future<String> setTransaction(TransactionModel transaction) async {
-    final User? currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) {
-      throw Exception('No user is currently signed in.');
-    }
-
     try {
       await firestore.collection('Transactions').doc(transaction.transactionId).set(transaction.toFirestore());
 
@@ -184,14 +222,29 @@ class FirestoreService {
   }
 
   Future<List<TransactionModel>> getAccountTransactions(String userId, String accountId) async {
-    final transactionsSnapshot = await firestore
+    // Query for transactions where accountId is the source.
+    final QuerySnapshot sourceSnapshot = await firestore
         .collection('Transactions')
         .where('userId', isEqualTo: userId)
         .where('accountId', isEqualTo: accountId)
-        .orderBy('transactionTime', descending: true)
         .get();
 
-    return transactionsSnapshot.docs.map((doc) => TransactionModel.fromFirestore(doc)).toList();
+    // Query for transfer transactions where the destination is this account.
+    final QuerySnapshot transferSnapshot = await firestore
+        .collection('Transactions')
+        .where('userId', isEqualTo: userId)
+        .where('transactionType', isEqualTo: TransactionType.transfer.index)
+        .where('transactionName', isEqualTo: accountId)
+        .get();
+
+    final List<TransactionModel> allTransactions = [
+      ...sourceSnapshot.docs.map((doc) => TransactionModel.fromFirestore(doc)),
+      ...transferSnapshot.docs.map((doc) => TransactionModel.fromFirestore(doc))
+    ];
+
+    // Sort the combined list by transactionTime descending.
+    allTransactions.sort((a, b) => b.transactionTime.compareTo(a.transactionTime));
+    return allTransactions;
   }
 
   // Tag Collection

@@ -6,6 +6,19 @@ class AuthenticationService {
   final FirebaseAuth auth = FirebaseAuth.instance;
   final FirebaseFirestore db = FirebaseFirestore.instance;
 
+  /// Returns the currently signed in user. Throws an exception if none is signed in.
+  User getCurrentUser() {
+    try {
+      final user = auth.currentUser;
+      if (user == null) {
+        throw Exception('No user is currently signed in.');
+      }
+      return user;
+    } catch (e) {
+      throw Exception('Error retrieving current user: ${e.toString()}');
+    }
+  }
+
   /// Send sign-in link to email
   Future<void> sendSignInLinkToEmail({required String email}) async {
     try {

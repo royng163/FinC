@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_iconpicker/Models/configuration.dart';
 import 'package:flutter_iconpicker/flutter_iconpicker.dart';
+import '../../helpers/authentication_service.dart';
 import '../../models/account_model.dart';
 import '../../helpers/firestore_service.dart';
 import 'package:flutter/services.dart';
@@ -21,9 +22,11 @@ class AddAccountView extends StatefulWidget {
 
 class AddAccountViewState extends State<AddAccountView> {
   final FirestoreService firestoreService = FirestoreService();
+  final AuthenticationService authService = AuthenticationService();
   final TextEditingController accountNameController = TextEditingController();
   final List<TextEditingController> balanceControllers = [];
   final List<TextEditingController> currencyControllers = [];
+  late User user;
   Color selectedColor = Colors.grey;
   IconPickerIcon? selectedIcon;
   AccountType selectedAccountType = AccountType.bank;
@@ -31,6 +34,7 @@ class AddAccountViewState extends State<AddAccountView> {
   @override
   void initState() {
     super.initState();
+    user = authService.getCurrentUser();
     addCurrencyField(widget.settingsController.baseCurrency, '0.0');
   }
 
@@ -66,14 +70,6 @@ class AddAccountViewState extends State<AddAccountView> {
 
   void addAccount() async {
     try {
-      final User? user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        throw Exception('No user is currently signed in.');
-      }
-
-      final String userId = user.uid;
-      final String accountId = firestoreService.firestore.collection('Accounts').doc().id;
-
       final Map<String, double> balances = {};
       for (int i = 0; i < currencyControllers.length; i++) {
         final currency = currencyControllers[i].text;
@@ -82,8 +78,8 @@ class AddAccountViewState extends State<AddAccountView> {
       }
 
       final AccountModel account = AccountModel(
-        accountId: accountId,
-        userId: userId,
+        accountId: firestoreService.firestore.collection('Accounts').doc().id,
+        userId: user.uid,
         accountType: selectedAccountType,
         accountName: accountNameController.text,
         balances: balances,

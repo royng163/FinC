@@ -1,3 +1,4 @@
+import 'package:finc/src/helpers/authentication_service.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
@@ -21,10 +22,12 @@ class EditAccountView extends StatefulWidget {
 }
 
 class EditAccountViewState extends State<EditAccountView> {
-  late FirestoreService firestoreService;
+  final FirestoreService firestoreService = FirestoreService();
+  final AuthenticationService authService = AuthenticationService();
   final TextEditingController accountNameController = TextEditingController();
   final List<TextEditingController> balanceControllers = [];
   final List<TextEditingController> currencyControllers = [];
+  late User user;
   late Color selectedColor;
   late IconPickerIcon? selectedIcon;
   late AccountType selectedAccountType;
@@ -32,7 +35,7 @@ class EditAccountViewState extends State<EditAccountView> {
   @override
   void initState() {
     super.initState();
-    firestoreService = FirestoreService();
+    user = authService.getCurrentUser();
     accountNameController.text = widget.account.accountName;
     selectedColor = Color(widget.account.color);
     selectedIcon = deserializeIcon(widget.account.icon);
@@ -75,14 +78,6 @@ class EditAccountViewState extends State<EditAccountView> {
 
   void editAccount() async {
     try {
-      final User? user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        throw Exception('No user is currently signed in.');
-      }
-
-      final String userId = user.uid;
-      final String accountId = widget.account.accountId;
-
       final Map<String, double> balances = {};
       for (int i = 0; i < currencyControllers.length; i++) {
         final currency = currencyControllers[i].text;
@@ -91,8 +86,8 @@ class EditAccountViewState extends State<EditAccountView> {
       }
 
       final AccountModel updatedAccount = AccountModel(
-        accountId: accountId,
-        userId: userId,
+        accountId: widget.account.accountId,
+        userId: user.uid,
         accountType: selectedAccountType,
         accountName: accountNameController.text,
         balances: balances,
@@ -124,7 +119,7 @@ class EditAccountViewState extends State<EditAccountView> {
 
   Future<void> deleteAccount() async {
     try {
-      await firestoreService.firestore.collection('Accounts').doc(widget.account.accountId).delete();
+      await firestoreService.deleteAccount(user.uid, widget.account.accountId, widget.account.accountName);
 
       if (!mounted) return;
 
@@ -133,7 +128,7 @@ class EditAccountViewState extends State<EditAccountView> {
         SnackBar(content: Text('Account Deleted Successfully')),
       );
 
-      Navigator.pop(context, true); // Pass a result indicating success
+      Navigator.pop(context, 'deleted'); // Pass an integer indicating account deletion
     } catch (e) {
       // Handle errors gracefully
       ScaffoldMessenger.of(context).showSnackBar(

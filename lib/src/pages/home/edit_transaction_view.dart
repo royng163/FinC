@@ -1,3 +1,4 @@
+import 'package:finc/src/helpers/authentication_service.dart';
 import 'package:finc/src/models/tag_model.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -24,11 +25,13 @@ class EditTransactionView extends StatefulWidget {
 
 class EditTransactionViewState extends State<EditTransactionView> {
   final FirestoreService firestoreService = FirestoreService();
+  final AuthenticationService authService = AuthenticationService();
   final TextEditingController transactionNameController = TextEditingController();
   final TextEditingController amountController = TextEditingController();
   final TextEditingController currencyController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
   final TextEditingController transactionTimeController = TextEditingController();
+  late User user;
   late TransactionType selectedTransactionType;
   late String selectedAccount;
   String selectedDestinationAccount = "";
@@ -40,6 +43,7 @@ class EditTransactionViewState extends State<EditTransactionView> {
   @override
   void initState() {
     super.initState();
+    user = authService.getCurrentUser();
     transactionNameController.text = widget.transaction.transactionName;
     amountController.text = widget.transaction.amount.toString();
     currencyController.text = widget.transaction.currency;
@@ -54,8 +58,7 @@ class EditTransactionViewState extends State<EditTransactionView> {
 
   Future<void> fetchDataFromFirestore() async {
     try {
-      final User? user = FirebaseAuth.instance.currentUser;
-      accounts = await firestoreService.getAccounts(user!.uid);
+      accounts = await firestoreService.getAccounts(user.uid);
       tags = await firestoreService.getTags(user.uid);
 
       setState(() {});
@@ -79,11 +82,6 @@ class EditTransactionViewState extends State<EditTransactionView> {
 
   Future<void> editTransaction() async {
     try {
-      final User? user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        throw Exception('No user is currently signed in.');
-      }
-
       final oldTransaction = await firestoreService.getTransaction(widget.transaction.transactionId);
 
       // Create the updated transaction
@@ -296,7 +294,7 @@ class EditTransactionViewState extends State<EditTransactionView> {
                 keyboardType: TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
                   // Allow only numbers and decimal point, and limit to two decimal places
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+                  FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d{0,2}')),
                 ],
                 validator: (value) {
                   if (value == null || value.isEmpty) {

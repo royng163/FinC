@@ -5,7 +5,7 @@ import 'package:finc/src/pages/home/edit_transaction_view.dart';
 import 'package:finc/src/pages/tags/edit_tag_view.dart';
 import 'package:finc/src/pages/tags/tags_page.dart';
 import 'package:flutter/material.dart';
-import 'package:finc/src/pages/home/add_account_view.dart';
+import 'package:finc/src/pages/accounts/add_account_view.dart';
 import 'package:finc/src/pages/home/add_tag_view.dart';
 import 'package:go_router/go_router.dart';
 import 'package:finc/src/pages/settings/signin_page.dart';

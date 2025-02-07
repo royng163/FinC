@@ -1,3 +1,4 @@
+import 'package:finc/src/helpers/authentication_service.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
@@ -15,10 +16,18 @@ class AddTagView extends StatefulWidget {
 
 class AddTagViewState extends State<AddTagView> {
   final FirestoreService firestoreService = FirestoreService();
+  final AuthenticationService authService = AuthenticationService();
   final TextEditingController tagNameController = TextEditingController();
+  late User user;
   Color selectedColor = Colors.grey;
   IconPickerIcon? selectedIcon;
   TagType selectedTagType = TagType.categories;
+
+  @override
+  void initState() {
+    super.initState();
+    user = authService.getCurrentUser();
+  }
 
   @override
   void dispose() {
@@ -28,17 +37,9 @@ class AddTagViewState extends State<AddTagView> {
 
   void addCategory() async {
     try {
-      final User? user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        throw Exception('No user is currently signed in.');
-      }
-
-      final String userId = user.uid;
-      final String categoryId = firestoreService.firestore.collection('Categories').doc().id;
-
       final TagModel category = TagModel(
-        tagId: categoryId,
-        userId: userId,
+        tagId: firestoreService.firestore.collection('Categories').doc().id,
+        userId: user.uid,
         tagName: tagNameController.text,
         tagType: selectedTagType,
         icon: serializeIcon(selectedIcon!) ?? {},

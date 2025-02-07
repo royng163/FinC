@@ -1,4 +1,5 @@
 import 'package:adaptive_navigation/adaptive_navigation.dart';
+import 'package:finc/src/helpers/authentication_service.dart';
 import 'package:finc/src/helpers/balance_service.dart';
 import 'package:finc/src/helpers/firestore_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -23,18 +24,21 @@ class AccountsPage extends StatefulWidget {
 }
 
 class AccountsPageState extends State<AccountsPage> {
+  final BalanceService balanceService = BalanceService();
+  final FirestoreService firestoreService = FirestoreService();
+  final AuthenticationService authService = AuthenticationService();
+  late User user;
   List<AccountModel> accounts = [];
   List<TransactionModel> transactions = [];
   Map<String, TagModel> tags = {};
   bool isLoadingAccounts = true;
   bool isLoadingTransactions = false;
   int selectedIndex = 0;
-  final BalanceService balanceService = BalanceService();
-  final FirestoreService firestore = FirestoreService();
 
   @override
   void initState() {
     super.initState();
+    user = authService.getCurrentUser();
     fetchAccounts();
     fetchTags();
   }
@@ -45,8 +49,7 @@ class AccountsPageState extends State<AccountsPage> {
     });
 
     try {
-      final User? user = FirebaseAuth.instance.currentUser;
-      accounts = await firestore.getAccounts(user!.uid);
+      accounts = await firestoreService.getAccounts(user.uid);
 
       setState(() {
         if (accounts.isNotEmpty) {
@@ -67,8 +70,7 @@ class AccountsPageState extends State<AccountsPage> {
 
   Future<void> fetchTags() async {
     try {
-      final User? user = FirebaseAuth.instance.currentUser;
-      List<TagModel> fetchedTags = await firestore.getTags(user!.uid);
+      List<TagModel> fetchedTags = await firestoreService.getTags(user.uid);
 
       setState(() {
         tags = {for (var tag in fetchedTags) tag.tagId: tag};
@@ -87,12 +89,7 @@ class AccountsPageState extends State<AccountsPage> {
     });
 
     try {
-      final User? user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        throw Exception('No user is currently signed in.');
-      }
-
-      transactions = await firestore.getAccountTransactions(user.uid, accountId);
+      transactions = await firestoreService.getAccountTransactions(user.uid, accountId);
 
       setState(() {});
     } catch (e) {
@@ -112,6 +109,41 @@ class AccountsPageState extends State<AccountsPage> {
     double luminance = backgroundColor.computeLuminance();
     // Return black for light backgrounds and white for dark backgrounds
     return luminance > 0.5 ? Colors.black : Colors.white;
+  }
+
+  String getTransactionName(TransactionModel transaction) {
+    // Display corresponding transaction name for transfer transactions
+    if (transaction.transactionType == TransactionType.transfer) {
+      if (transaction.accountId == accounts[selectedIndex].accountId) {
+        // Transfer to the destination account with Id stored in transactionName
+        return 'To ${accounts.firstWhere((account) => account.accountId == transaction.transactionName).accountName}';
+      } else {
+        // Transfer from another account
+        return 'From ${accounts.firstWhere((account) => account.accountId == transaction.accountId).accountName}';
+      }
+    }
+    // Simply return the transaction name for other transaction types
+    return transaction.transactionName;
+  }
+
+  String getDisplayAmount(TransactionModel transaction) {
+    String symbol;
+    switch (transaction.transactionType) {
+      case TransactionType.expense:
+        symbol = '-';
+        break;
+      case TransactionType.transfer:
+        if (transaction.accountId == accounts[selectedIndex].accountId) {
+          symbol = '-';
+        } else {
+          symbol = '';
+        }
+        break;
+      default:
+        symbol = '';
+    }
+    // Display the amount in the transaction currency
+    return '$symbol${transaction.amount} ${transaction.currency}';
   }
 
   @override
@@ -211,7 +243,7 @@ class AccountsPageState extends State<AccountsPage> {
                             final transaction = transactions[index];
                             final transactionTags = transaction.tags.map((tagId) => tags[tagId]).toList();
                             return ListTile(
-                              title: Text(transaction.transactionName),
+                              title: Text(getTransactionName(transaction)),
                               subtitle: Wrap(
                                 children: transactionTags
                                     .map((tag) => Container(
@@ -248,7 +280,7 @@ class AccountsPageState extends State<AccountsPage> {
                                     style: const TextStyle(fontSize: 12),
                                   ),
                                   Text(
-                                    '\$${transaction.amount.toStringAsFixed(2)}',
+                                    getDisplayAmount(transaction),
                                     style: const TextStyle(fontSize: 18),
                                   ),
                                 ],
@@ -260,6 +292,8 @@ class AccountsPageState extends State<AccountsPage> {
                                 );
                                 if (result == true) {
                                   fetchTransactions(accounts[selectedIndex].accountId);
+                                } else if (result == 'deleted') {
+                                  fetchAccounts();
                                 }
                               },
                             );
