@@ -64,11 +64,13 @@ class AppRouter {
       ),
       GoRoute(
         path: AppRoutes.addTransaction,
-        builder: (context, state) => AddTransactionView(settingsController: settingsController),
+        builder: (context, state) => AddTransactionView(
+            settingsController: settingsController, transactionClone: state.extra as TransactionModel?),
       ),
       GoRoute(
           path: AppRoutes.editTransaction,
-          builder: (context, state) => EditTransactionView(transaction: state.extra as TransactionModel)),
+          builder: (context, state) => EditTransactionView(
+              settingsController: settingsController, transaction: state.extra as TransactionModel)),
       GoRoute(
         path: AppRoutes.addAccount,
         builder: (context, state) => AddAccountView(settingsController: settingsController),
@@ -76,9 +78,6 @@ class AppRouter {
       GoRoute(
           path: AppRoutes.editAccount,
           builder: (context, state) => EditAccountView(account: state.extra as AccountModel)),
-      GoRoute(
-          path: AppRoutes.editTransaction,
-          builder: (context, state) => EditTransactionView(transaction: state.extra as TransactionModel)),
       GoRoute(
         path: AppRoutes.addTag,
         builder: (context, state) => AddTagView(),
