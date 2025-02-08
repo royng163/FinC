@@ -1,15 +1,35 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:hive/hive.dart';
 
-enum AccountType { bank, creditCard, securities }
+part 'account_model.g.dart';
 
+@HiveType(typeId: 0)
+enum AccountType {
+  @HiveField(0)
+  bank,
+  @HiveField(1)
+  creditCard,
+  @HiveField(2)
+  securities
+}
+
+@HiveType(typeId: 1)
 class AccountModel {
+  @HiveField(0)
   final String accountId;
+  @HiveField(1)
   final String userId;
+  @HiveField(2)
   final AccountType accountType;
+  @HiveField(3)
   final String accountName;
+  @HiveField(4)
   final Map<String, double> balances;
+  @HiveField(5)
   final Map<String, dynamic> icon;
+  @HiveField(6)
   final int color;
+  @HiveField(7)
   final Timestamp createdAt;
 
   AccountModel({

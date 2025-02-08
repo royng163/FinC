@@ -2,13 +2,13 @@ import 'package:adaptive_navigation/adaptive_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../components/app_routes.dart';
-import '../../components/settings_controller.dart';
+import '../../helpers/settings_service.dart';
 import 'balance_tab.dart';
 
 class HomePage extends StatefulWidget {
-  final SettingsController settingsController;
+  final SettingsService settingsService;
 
-  const HomePage({super.key, required this.settingsController});
+  const HomePage({super.key, required this.settingsService});
 
   @override
   HomePageState createState() => HomePageState();
@@ -45,7 +45,7 @@ class HomePageState extends State<HomePage> {
         body: TabBarView(
           children: <Widget>[
             BalanceTab(
-              settingsController: widget.settingsController,
+              settingsService: widget.settingsService,
               registerState: (state) => balanceTabState = state,
             ),
             portfolioView(),

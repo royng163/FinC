@@ -10,14 +10,14 @@ import 'package:flutter_iconpicker/flutter_iconpicker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../components/app_routes.dart';
-import '../../components/settings_controller.dart';
+import '../../helpers/settings_service.dart';
 import '../../models/transaction_model.dart';
 
 class BalanceTab extends StatefulWidget {
-  final SettingsController settingsController;
+  final SettingsService settingsService;
   final Function(BalanceTabState) registerState;
 
-  const BalanceTab({super.key, required this.settingsController, required this.registerState});
+  const BalanceTab({super.key, required this.settingsService, required this.registerState});
 
   @override
   BalanceTabState createState() => BalanceTabState();
@@ -58,7 +58,7 @@ class BalanceTabState extends State<BalanceTab> {
 
   Future<void> fetchTotalBalance() async {
     try {
-      double balance = await balanceService.getTotalBalance(widget.settingsController.baseCurrency);
+      double balance = await balanceService.getTotalBalance(widget.settingsService.baseCurrency);
 
       setState(() {
         totalBalance = balance;
@@ -73,7 +73,7 @@ class BalanceTabState extends State<BalanceTab> {
 
   Future<void> fetchMonthlyTransactions() async {
     try {
-      final result = await balanceService.getMonthlyStats(widget.settingsController.baseCurrency);
+      final result = await balanceService.getMonthlyStats(widget.settingsService.baseCurrency);
       setState(() {
         totalIncome = result['income']!;
         totalExpense = result['expense']!;

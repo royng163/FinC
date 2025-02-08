@@ -92,6 +92,7 @@ class EditAccountViewState extends State<EditAccountView> {
         accountName: accountNameController.text,
         balances: balances,
         icon: serializeIcon(selectedIcon!) ?? {},
+        // ignore: deprecated_member_use
         color: selectedColor.value,
         createdAt: widget.account.createdAt,
       );

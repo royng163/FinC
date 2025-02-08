@@ -43,6 +43,7 @@ class AddTagViewState extends State<AddTagView> {
         tagName: tagNameController.text,
         tagType: selectedTagType,
         icon: serializeIcon(selectedIcon!) ?? {},
+        // ignore: deprecated_member_use
         color: selectedColor.value,
       );
 

@@ -9,12 +9,12 @@ import '../../helpers/firestore_service.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:currency_picker/currency_picker.dart';
-import '../../components/settings_controller.dart';
+import '../../helpers/settings_service.dart';
 
 class AddAccountView extends StatefulWidget {
-  final SettingsController settingsController;
+  final SettingsService settingsService;
 
-  const AddAccountView({super.key, required this.settingsController});
+  const AddAccountView({super.key, required this.settingsService});
 
   @override
   AddAccountViewState createState() => AddAccountViewState();
@@ -35,7 +35,7 @@ class AddAccountViewState extends State<AddAccountView> {
   void initState() {
     super.initState();
     user = authService.getCurrentUser();
-    addCurrencyField(widget.settingsController.baseCurrency, '0.0');
+    addCurrencyField(widget.settingsService.baseCurrency, '0.0');
   }
 
   @override
@@ -84,6 +84,7 @@ class AddAccountViewState extends State<AddAccountView> {
         accountName: accountNameController.text,
         balances: balances,
         icon: serializeIcon(selectedIcon!) ?? {},
+        // ignore: deprecated_member_use
         color: selectedColor.value,
         createdAt: Timestamp.now(),
       );

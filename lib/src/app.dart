@@ -4,14 +4,14 @@ import 'package:finc/src/models/user_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'components/settings_controller.dart';
+import 'helpers/settings_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 /// The Widget that configures your application.
 class MyApp extends StatefulWidget {
-  final SettingsController settingsController;
+  final SettingsService settingsService;
 
-  const MyApp({super.key, required this.settingsController});
+  const MyApp({super.key, required this.settingsService});
 
   @override
   MyAppState createState() => MyAppState();
@@ -43,7 +43,7 @@ class MyAppState extends State<MyApp> {
     } else {
       currentUser = null;
     }
-    return AppRouter(currentUser: currentUser, settingsController: widget.settingsController);
+    return AppRouter(currentUser: currentUser, settingsService: widget.settingsService);
   }
 
   @override
@@ -72,7 +72,7 @@ class MyAppState extends State<MyApp> {
         } else {
           final appRouter = snapshot.data!;
           return ListenableBuilder(
-            listenable: widget.settingsController,
+            listenable: widget.settingsService,
             builder: (BuildContext context, Widget? child) {
               return MaterialApp.router(
                 // Providing a restorationScopeId allows the Navigator built by the
@@ -103,10 +103,10 @@ class MyAppState extends State<MyApp> {
 
                 // Define a light and dark color theme. Then, read the user's
                 // preferred ThemeMode (light, dark, or system default) from the
-                // SettingsController to display the correct theme.
+                // settingsService to display the correct theme.
                 theme: ThemeData(),
                 darkTheme: ThemeData.dark(),
-                themeMode: widget.settingsController.themeMode,
+                themeMode: widget.settingsService.themeMode,
 
                 routerConfig: appRouter.router,
               );

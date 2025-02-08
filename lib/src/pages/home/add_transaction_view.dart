@@ -10,13 +10,13 @@ import 'package:intl/intl.dart';
 import '../../helpers/firestore_service.dart';
 import 'package:flutter/services.dart';
 import 'package:currency_picker/currency_picker.dart';
-import '../../components/settings_controller.dart';
+import '../../helpers/settings_service.dart';
 
 class AddTransactionView extends StatefulWidget {
-  final SettingsController settingsController;
+  final SettingsService settingsService;
   final TransactionModel? transactionClone;
 
-  const AddTransactionView({super.key, required this.settingsController, this.transactionClone});
+  const AddTransactionView({super.key, required this.settingsService, this.transactionClone});
 
   @override
   AddTransactionViewState createState() => AddTransactionViewState();
@@ -43,7 +43,7 @@ class AddTransactionViewState extends State<AddTransactionView> {
   void initState() {
     super.initState();
     user = authService.getCurrentUser();
-    currencyController.text = widget.settingsController.baseCurrency;
+    currencyController.text = widget.settingsService.baseCurrency;
     transactionTimeController.text = DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now());
 
     // If a transaction is passed for cloning, prefill the details.

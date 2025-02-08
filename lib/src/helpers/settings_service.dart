@@ -1,34 +1,66 @@
+import 'package:finc/src/helpers/hive_service.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:hive/hive.dart';
 
-/// A service that stores and retrieves user settings.
-class SettingsService {
+class SettingsService with ChangeNotifier {
   static const String themeModeKey = 'themeMode';
   static const String baseCurrencyKey = 'baseCurrency';
+  late final Box<dynamic> _box;
 
-  /// Loads the User's preferred ThemeMode from local storage.
-  Future<ThemeMode> themeMode() async {
-    final prefs = await SharedPreferences.getInstance();
-    final themeModeString = prefs.getString(themeModeKey) ?? 'system';
-    return themeModeFromString(themeModeString);
+  // The user's preferred ThemeMode and getter.
+  late ThemeMode _themeMode;
+  ThemeMode get themeMode => _themeMode;
+
+  // The user's preferred base currency and getter.
+  late String _baseCurrency;
+  String get baseCurrency => _baseCurrency;
+
+  /// Initialize the settings service by loading the user's settings.
+  Future<void> init() async {
+    _box = await HiveService().openBox<dynamic>('Settings');
+    await loadSettings();
   }
 
-  /// Persists the user's preferred ThemeMode to local storage.
-  Future<void> updateThemeMode(ThemeMode theme) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(themeModeKey, themeModeToString(theme));
+  /// Load settings directly from the Hive box.
+  Future<void> loadSettings() async {
+    final themeModeString = _box.get(themeModeKey, defaultValue: 'system') as String;
+    _themeMode = themeModeFromString(themeModeString);
+
+    _baseCurrency = _box.get(baseCurrencyKey, defaultValue: 'HKD') as String;
+
+    notifyListeners();
   }
 
-  /// Loads the User's preferred base currency from local storage.
-  Future<String> baseCurrency() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(baseCurrencyKey) ?? 'HKD';
+  /// Update and persist the ThemeMode based on the user's selection.
+  Future<void> updateThemeMode(ThemeMode? newThemeMode) async {
+    if (newThemeMode == null) return;
+
+    // Do not perform any work if new and old ThemeMode are identical
+    if (newThemeMode == _themeMode) return;
+
+    // Otherwise, store the new ThemeMode in memory
+    _themeMode = newThemeMode;
+
+    // Important! Inform listeners a change has occurred.
+    notifyListeners();
+
+    await _box.put(themeModeKey, themeModeToString(newThemeMode));
   }
 
-  /// Persists the user's preferred base currency to local storage.
-  Future<void> updateBaseCurrency(String currency) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(baseCurrencyKey, currency);
+  /// Update and persist the base currency based on the user's selection.
+  Future<void> updateBaseCurrency(String newBaseCurrency) async {
+    if (newBaseCurrency.isEmpty) return;
+
+    // Do not perform any work if new and old base currency are identical
+    if (newBaseCurrency == _baseCurrency) return;
+
+    // Otherwise, store the new base currency in memory
+    _baseCurrency = newBaseCurrency;
+
+    // Important! Inform listeners a change has occurred.
+    notifyListeners();
+
+    await _box.put(baseCurrencyKey, newBaseCurrency);
   }
 
   ThemeMode themeModeFromString(String themeModeString) {

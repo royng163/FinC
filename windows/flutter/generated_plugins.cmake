@@ -4,7 +4,6 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   cloud_firestore
-  currency_converter_pro
   firebase_auth
   firebase_core
 )

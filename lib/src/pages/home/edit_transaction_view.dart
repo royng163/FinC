@@ -7,7 +7,7 @@ import 'package:flutter_iconpicker/flutter_iconpicker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../components/app_routes.dart';
-import '../../components/settings_controller.dart';
+import '../../helpers/settings_service.dart';
 import '../../models/transaction_model.dart';
 import '../../models/account_model.dart';
 import '../../helpers/firestore_service.dart';
@@ -15,12 +15,12 @@ import 'package:flutter/services.dart';
 import 'package:currency_picker/currency_picker.dart';
 
 class EditTransactionView extends StatefulWidget {
-  final SettingsController settingsController;
+  final SettingsService settingsService;
   final TransactionModel transaction;
 
   const EditTransactionView({
     super.key,
-    required this.settingsController,
+    required this.settingsService,
     required this.transaction,
   });
 

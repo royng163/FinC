@@ -1,17 +1,41 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:hive/hive.dart';
 
-enum TransactionType { expense, income, transfer, adjustment }
+part 'transaction_model.g.dart';
 
+@HiveType(typeId: 2)
+enum TransactionType {
+  @HiveField(0)
+  expense,
+  @HiveField(1)
+  income,
+  @HiveField(2)
+  transfer,
+  @HiveField(3)
+  adjustment
+}
+
+@HiveType(typeId: 3)
 class TransactionModel {
+  @HiveField(0)
   final String transactionId;
+  @HiveField(1)
   final String userId;
+  @HiveField(2)
   final String accountId;
+  @HiveField(3)
   final List<String> tags;
+  @HiveField(4)
   final String transactionName;
+  @HiveField(5)
   final double amount;
+  @HiveField(6)
   final String currency;
+  @HiveField(7)
   final String description;
+  @HiveField(8)
   final TransactionType transactionType;
+  @HiveField(9)
   final Timestamp transactionTime;
 
   TransactionModel({

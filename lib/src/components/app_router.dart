@@ -13,7 +13,7 @@ import 'package:finc/src/models/user_model.dart';
 import 'package:finc/src/pages/accounts/accounts_page.dart';
 import 'package:finc/src/pages/settings/settings_page.dart';
 import 'package:finc/src/pages/home/add_transaction_view.dart';
-import 'package:finc/src/components/settings_controller.dart';
+import 'package:finc/src/helpers/settings_service.dart';
 
 import '../models/account_model.dart';
 import '../models/tag_model.dart';
@@ -23,11 +23,11 @@ import '../pages/home/home_page.dart';
 class AppRouter {
   final _rootNavigatorKey = GlobalKey<NavigatorState>();
   final UserModel? currentUser;
-  final SettingsController settingsController;
+  final SettingsService settingsService;
 
   AppRouter({
     this.currentUser,
-    required this.settingsController,
+    required this.settingsService,
   });
 
   late final router = GoRouter(
@@ -36,18 +36,18 @@ class AppRouter {
     routes: [
       StatefulShellRoute.indexedStack(
           builder: (context, state, navigationShell) =>
-              AppWrapper(settingsController: settingsController, navigationShell: navigationShell),
+              AppWrapper(settingsService: settingsService, navigationShell: navigationShell),
           branches: [
             StatefulShellBranch(routes: [
               GoRoute(
                 path: AppRoutes.home,
-                builder: (context, state) => HomePage(settingsController: settingsController),
+                builder: (context, state) => HomePage(settingsService: settingsService),
               )
             ]),
             StatefulShellBranch(routes: [
               GoRoute(
                 path: AppRoutes.accounts,
-                builder: (context, state) => AccountsPage(settingsController: settingsController),
+                builder: (context, state) => AccountsPage(settingsService: settingsService),
               ),
             ]),
             StatefulShellBranch(routes: [
@@ -60,20 +60,20 @@ class AppRouter {
       ),
       GoRoute(
         path: AppRoutes.settings,
-        builder: (context, state) => SettingsPage(controller: settingsController),
+        builder: (context, state) => SettingsPage(controller: settingsService),
       ),
       GoRoute(
         path: AppRoutes.addTransaction,
-        builder: (context, state) => AddTransactionView(
-            settingsController: settingsController, transactionClone: state.extra as TransactionModel?),
+        builder: (context, state) =>
+            AddTransactionView(settingsService: settingsService, transactionClone: state.extra as TransactionModel?),
       ),
       GoRoute(
           path: AppRoutes.editTransaction,
-          builder: (context, state) => EditTransactionView(
-              settingsController: settingsController, transaction: state.extra as TransactionModel)),
+          builder: (context, state) =>
+              EditTransactionView(settingsService: settingsService, transaction: state.extra as TransactionModel)),
       GoRoute(
         path: AppRoutes.addAccount,
-        builder: (context, state) => AddAccountView(settingsController: settingsController),
+        builder: (context, state) => AddAccountView(settingsService: settingsService),
       ),
       GoRoute(
           path: AppRoutes.editAccount,

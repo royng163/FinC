@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:adaptive_navigation/adaptive_navigation.dart';
 import 'package:go_router/go_router.dart';
 import 'app_routes.dart';
-import 'settings_controller.dart';
+import '../helpers/settings_service.dart';
 
 class AppWrapper extends StatefulWidget {
-  final SettingsController settingsController;
+  final SettingsService settingsService;
   final StatefulNavigationShell navigationShell;
 
   const AppWrapper({
     super.key,
-    required this.settingsController,
+    required this.settingsService,
     required this.navigationShell,
   });
 

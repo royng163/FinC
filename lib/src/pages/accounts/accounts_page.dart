@@ -9,15 +9,15 @@ import 'package:flutter_iconpicker/flutter_iconpicker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../components/app_routes.dart';
-import '../../components/settings_controller.dart';
+import '../../helpers/settings_service.dart';
 import '../../models/tag_model.dart';
 import '../../models/account_model.dart';
 import '../../models/transaction_model.dart';
 
 class AccountsPage extends StatefulWidget {
-  final SettingsController settingsController;
+  final SettingsService settingsService;
 
-  const AccountsPage({super.key, required this.settingsController});
+  const AccountsPage({super.key, required this.settingsService});
 
   @override
   AccountsPageState createState() => AccountsPageState();
@@ -178,8 +178,7 @@ class AccountsPageState extends State<AccountsPage> {
                       final Color backgroundColor = Color(account.color);
                       final Color textColor = getTextColor(backgroundColor);
                       return FutureBuilder<double>(
-                        future:
-                            balanceService.getAccountBalance(account.balances, widget.settingsController.baseCurrency),
+                        future: balanceService.getAccountBalance(account.balances, widget.settingsService.baseCurrency),
                         builder: (context, snapshot) {
                           double accountBalance = snapshot.data ?? 0.0;
                           return GestureDetector(
