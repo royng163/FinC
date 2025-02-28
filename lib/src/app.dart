@@ -61,14 +61,6 @@ class MyAppState extends State<MyApp> {
               ),
             ),
           );
-        } else if (snapshot.hasError) {
-          return MaterialApp(
-            home: Scaffold(
-              body: Center(
-                child: Text('Error: ${snapshot.error}'),
-              ),
-            ),
-          );
         } else {
           final appRouter = snapshot.data!;
           return ListenableBuilder(

@@ -1,73 +1,68 @@
-import 'package:finc/src/helpers/authentication_service.dart';
+import 'package:finc/src/helpers/hive_service.dart';
 import 'package:finc/src/models/tag_model.dart';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_iconpicker/flutter_iconpicker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../components/app_routes.dart';
-import '../../helpers/settings_service.dart';
 import '../../models/transaction_model.dart';
 import '../../models/account_model.dart';
-import '../../helpers/firestore_service.dart';
 import 'package:flutter/services.dart';
 import 'package:currency_picker/currency_picker.dart';
 
 class EditTransactionView extends StatefulWidget {
-  final SettingsService settingsService;
-  final TransactionModel transaction;
+  final TransactionModel _transaction;
 
   const EditTransactionView({
     super.key,
-    required this.settingsService,
-    required this.transaction,
-  });
+    required TransactionModel transaction,
+  }) : _transaction = transaction;
 
   @override
   EditTransactionViewState createState() => EditTransactionViewState();
 }
 
 class EditTransactionViewState extends State<EditTransactionView> {
-  final FirestoreService firestoreService = FirestoreService();
-  final AuthenticationService authService = AuthenticationService();
+  final HiveService _hiveService = HiveService();
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController transactionNameController = TextEditingController();
-  final TextEditingController amountController = TextEditingController();
-  final TextEditingController currencyController = TextEditingController();
-  final TextEditingController descriptionController = TextEditingController();
-  final TextEditingController transactionTimeController = TextEditingController();
-  late User user;
-  late TransactionType selectedTransactionType;
-  late String selectedAccount;
-  String selectedDestinationAccount = "";
-  List<AccountModel> accounts = [];
-  List<String> selectedTags = [];
-  List<TagModel> tags = [];
-  String response = "";
+  final TextEditingController _transactionNameController = TextEditingController();
+  final TextEditingController _amountController = TextEditingController();
+  final TextEditingController _currencyController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _transactionTimeController = TextEditingController();
+  late TransactionType _selectedTransactionType;
+  late String _selectedAccount;
+  String _selectedDestinationAccount = "";
+  List<AccountModel> _accounts = [];
+  List<String> _selectedTags = [];
+  List<TagModel> _tags = [];
+  String _response = "";
 
   @override
   void initState() {
     super.initState();
-    user = authService.getCurrentUser();
-    transactionNameController.text = widget.transaction.transactionName;
-    amountController.text = widget.transaction.amount.toString();
-    currencyController.text = widget.transaction.currency;
-    descriptionController.text = widget.transaction.description;
-    transactionTimeController.text = DateFormat('yyyy-MM-dd HH:mm').format(widget.transaction.transactionTime.toDate());
-    selectedAccount = widget.transaction.accountId;
-    selectedTags = widget.transaction.tags;
-    selectedTransactionType = widget.transaction.transactionType;
-    selectedDestinationAccount = widget.transaction.transactionName;
-    fetchDataFromFirestore();
+    _transactionNameController.text = widget._transaction.transactionName;
+    _amountController.text = widget._transaction.amount.toString();
+    _currencyController.text = widget._transaction.currency;
+    _descriptionController.text = widget._transaction.description;
+    _transactionTimeController.text =
+        DateFormat('yyyy-MM-dd HH:mm').format(widget._transaction.transactionTime.toDate());
+    _selectedAccount = widget._transaction.accountId;
+    _selectedTags = widget._transaction.tags;
+    _selectedTransactionType = widget._transaction.transactionType;
+    _selectedDestinationAccount = widget._transaction.transactionName;
+    fetchData();
   }
 
-  Future<void> fetchDataFromFirestore() async {
+  Future<void> fetchData() async {
     try {
-      accounts = await firestoreService.getAccounts(user.uid);
-      tags = await firestoreService.getTags(user.uid);
-
-      setState(() {});
+      final accounts = await _hiveService.getAccounts();
+      final tags = await _hiveService.getTags();
+      setState(() {
+        _accounts = accounts;
+        _tags = tags;
+      });
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -78,11 +73,11 @@ class EditTransactionViewState extends State<EditTransactionView> {
 
   @override
   void dispose() {
-    transactionNameController.dispose();
-    amountController.dispose();
-    currencyController.dispose();
-    descriptionController.dispose();
-    transactionTimeController.dispose();
+    _transactionNameController.dispose();
+    _amountController.dispose();
+    _currencyController.dispose();
+    _descriptionController.dispose();
+    _transactionTimeController.dispose();
     super.dispose();
   }
 
@@ -91,43 +86,43 @@ class EditTransactionViewState extends State<EditTransactionView> {
       if (!_formKey.currentState!.validate()) {
         return;
       }
-      final oldTransaction = await firestoreService.getTransaction(widget.transaction.transactionId);
+      final oldTransaction = await _hiveService.getTransaction(widget._transaction.transactionId);
 
       // Create the updated transaction
       final newTransaction = TransactionModel(
         transactionId: oldTransaction.transactionId,
         userId: oldTransaction.userId,
-        accountId: selectedAccount,
-        tags: selectedTags,
-        transactionName: selectedTransactionType == TransactionType.transfer
-            ? selectedDestinationAccount
-            : transactionNameController.text,
-        amount: double.parse(amountController.text),
-        currency: currencyController.text,
-        description: descriptionController.text,
-        transactionType: selectedTransactionType,
-        transactionTime: Timestamp.fromDate(DateFormat('yyyy-MM-dd HH:mm').parse(transactionTimeController.text)),
+        accountId: _selectedAccount,
+        tags: _selectedTags,
+        transactionName: _selectedTransactionType == TransactionType.transfer
+            ? _selectedDestinationAccount
+            : _transactionNameController.text,
+        amount: double.parse(_amountController.text),
+        currency: _currencyController.text,
+        description: _descriptionController.text,
+        transactionType: _selectedTransactionType,
+        transactionTime: Timestamp.fromDate(DateFormat('yyyy-MM-dd HH:mm').parse(_transactionTimeController.text)),
       );
 
-      response = await firestoreService.updateTransaction(newTransaction, oldTransaction);
+      _response = await _hiveService.updateTransaction(newTransaction, oldTransaction);
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response)),
+        SnackBar(content: Text(_response)),
       );
 
-      Navigator.pop(context, true);
+      Navigator.pop(context);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response)),
+        SnackBar(content: Text(_response)),
       );
     }
   }
 
   Future<void> deleteTransaction() async {
     try {
-      response = await firestoreService.deleteTransaction(widget.transaction);
+      _response = await _hiveService.deleteTransaction(widget._transaction);
 
       if (!mounted) return;
 
@@ -160,7 +155,7 @@ class EditTransactionViewState extends State<EditTransactionView> {
             onPressed: () {
               context.pushReplacement(
                 AppRoutes.addTransaction,
-                extra: widget.transaction,
+                extra: widget._transaction,
               );
             },
           ),
@@ -188,12 +183,14 @@ class EditTransactionViewState extends State<EditTransactionView> {
                     spacing: 4,
                     children: TransactionType.values
                         .map((t) => ChoiceChip(
-                              label: Text(t.toString().split('.').last[0].toUpperCase() +
-                                  t.toString().split('.').last.substring(1).toLowerCase()),
-                              selected: selectedTransactionType == t,
+                              label: Text(
+                                t.toString().split('.').last[0].toUpperCase() +
+                                    t.toString().split('.').last.substring(1).toLowerCase(),
+                              ),
+                              selected: _selectedTransactionType == t,
                               onSelected: (bool selected) {
                                 setState(() {
-                                  selectedTransactionType = selected ? t : TransactionType.expense;
+                                  _selectedTransactionType = selected ? t : TransactionType.expense;
                                 });
                               },
                             ))
@@ -202,7 +199,7 @@ class EditTransactionViewState extends State<EditTransactionView> {
                 },
               ),
             ),
-            if (selectedTransactionType == TransactionType.transfer) ...[
+            if (_selectedTransactionType == TransactionType.transfer) ...[
               Text(
                 "Transfer from",
                 style: TextStyle(fontSize: 16),
@@ -220,23 +217,23 @@ class EditTransactionViewState extends State<EditTransactionView> {
                   return Wrap(
                     alignment: WrapAlignment.start,
                     spacing: 8,
-                    children: accounts
+                    children: _accounts
                         .map((a) => ChoiceChip(
                               avatar: Icon(deserializeIcon(a.icon)?.data, color: Color(a.color)),
                               backgroundColor: Color(a.color).withAlpha(100),
                               selectedColor: Color(a.color).withAlpha(100),
                               label: Text(a.accountName),
-                              selected: selectedAccount == a.accountId,
+                              selected: _selectedAccount == a.accountId,
                               showCheckmark: false,
                               shape: RoundedRectangleBorder(
-                                side: selectedAccount == a.accountId
+                                side: _selectedAccount == a.accountId
                                     ? BorderSide(color: Color(a.color), width: 3)
                                     : BorderSide.none,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               onSelected: (bool selected) {
                                 setState(() {
-                                  selectedAccount = selected ? a.accountId : "";
+                                  _selectedAccount = selected ? a.accountId : "";
                                 });
                               },
                             ))
@@ -244,14 +241,14 @@ class EditTransactionViewState extends State<EditTransactionView> {
                   );
                 },
                 validator: (value) {
-                  if (selectedAccount.isEmpty) {
+                  if (_selectedAccount.isEmpty) {
                     return 'Please select an account';
                   }
                   return null;
                 },
               ),
             ),
-            if (selectedTransactionType == TransactionType.transfer) ...[
+            if (_selectedTransactionType == TransactionType.transfer) ...[
               Text(
                 "Transfer To",
                 style: TextStyle(fontSize: 16),
@@ -263,23 +260,23 @@ class EditTransactionViewState extends State<EditTransactionView> {
                     return Wrap(
                       alignment: WrapAlignment.start,
                       spacing: 8,
-                      children: accounts
+                      children: _accounts
                           .map((a) => ChoiceChip(
                                 avatar: Icon(deserializeIcon(a.icon)?.data, color: Color(a.color)),
                                 backgroundColor: Color(a.color).withAlpha(100),
                                 selectedColor: Color(a.color).withAlpha(100),
                                 label: Text(a.accountName),
-                                selected: selectedDestinationAccount == a.accountId,
+                                selected: _selectedDestinationAccount == a.accountId,
                                 showCheckmark: false,
                                 shape: RoundedRectangleBorder(
-                                  side: selectedDestinationAccount == a.accountId
+                                  side: _selectedDestinationAccount == a.accountId
                                       ? BorderSide(color: Color(a.color), width: 3)
                                       : BorderSide.none,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 onSelected: (bool selected) {
                                   setState(() {
-                                    selectedDestinationAccount = selected ? a.accountId : "";
+                                    _selectedDestinationAccount = selected ? a.accountId : "";
                                   });
                                 },
                               ))
@@ -287,7 +284,7 @@ class EditTransactionViewState extends State<EditTransactionView> {
                     );
                   },
                   validator: (value) {
-                    if (selectedDestinationAccount.isEmpty) {
+                    if (_selectedDestinationAccount.isEmpty) {
                       return 'Please select a destination account';
                     }
                     return null;
@@ -306,16 +303,16 @@ class EditTransactionViewState extends State<EditTransactionView> {
                     return Wrap(
                       alignment: WrapAlignment.start,
                       spacing: 8,
-                      children: tags
+                      children: _tags
                           .map((c) => ChoiceChip(
                                 avatar: Icon(deserializeIcon(c.icon)?.data, color: Color(c.color)),
                                 backgroundColor: Color(c.color).withAlpha(100),
                                 selectedColor: Color(c.color).withAlpha(100),
                                 label: Text(c.tagName),
-                                selected: selectedTags.contains(c.tagId),
+                                selected: _selectedTags.contains(c.tagId),
                                 showCheckmark: false,
                                 shape: RoundedRectangleBorder(
-                                  side: selectedTags.contains(c.tagId)
+                                  side: _selectedTags.contains(c.tagId)
                                       ? BorderSide(color: Color(c.color), width: 3)
                                       : BorderSide.none,
                                   borderRadius: BorderRadius.circular(8),
@@ -323,9 +320,9 @@ class EditTransactionViewState extends State<EditTransactionView> {
                                 onSelected: (bool selected) {
                                   setState(() {
                                     if (selected) {
-                                      selectedTags.add(c.tagId);
+                                      _selectedTags.add(c.tagId);
                                     } else {
-                                      selectedTags.remove(c.tagId);
+                                      _selectedTags.remove(c.tagId);
                                     }
                                   });
                                 },
@@ -339,9 +336,12 @@ class EditTransactionViewState extends State<EditTransactionView> {
                 height: 24,
               ),
               TextFormField(
-                controller: transactionNameController,
-                decoration:
-                    const InputDecoration(labelText: "Name", hintText: "e.g. Lunch", border: OutlineInputBorder()),
+                controller: _transactionNameController,
+                decoration: const InputDecoration(
+                  labelText: "Name",
+                  hintText: "e.g. Lunch",
+                  border: OutlineInputBorder(),
+                ),
                 keyboardType: TextInputType.text,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -353,9 +353,12 @@ class EditTransactionViewState extends State<EditTransactionView> {
             ],
             SizedBox(height: 10),
             TextFormField(
-              controller: amountController,
-              decoration:
-                  const InputDecoration(labelText: "Amount", hintText: "e.g. 79.9", border: OutlineInputBorder()),
+              controller: _amountController,
+              decoration: const InputDecoration(
+                labelText: "Amount",
+                hintText: "e.g. 79.9",
+                border: OutlineInputBorder(),
+              ),
               keyboardType: TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [
                 // Allow only numbers and decimal point, and limit to two decimal places
@@ -372,7 +375,7 @@ class EditTransactionViewState extends State<EditTransactionView> {
                 if (parts.length == 2 && parts[1].length > 2) {
                   return 'Amount cannot have more than two decimal places';
                 }
-                if (selectedTransactionType != TransactionType.adjustment && double.parse(value) < 0) {
+                if (_selectedTransactionType != TransactionType.adjustment && double.parse(value) < 0) {
                   return 'Negative amounts are only allowed for adjustments';
                 }
                 return null;
@@ -380,7 +383,7 @@ class EditTransactionViewState extends State<EditTransactionView> {
             ),
             SizedBox(height: 10),
             TextFormField(
-              controller: currencyController,
+              controller: _currencyController,
               readOnly: true,
               decoration: const InputDecoration(
                 labelText: "Currency",
@@ -394,7 +397,7 @@ class EditTransactionViewState extends State<EditTransactionView> {
                   showCurrencyCode: true,
                   onSelect: (Currency currency) {
                     setState(() {
-                      currencyController.text = currency.code;
+                      _currencyController.text = currency.code;
                     });
                   },
                 );
@@ -410,21 +413,25 @@ class EditTransactionViewState extends State<EditTransactionView> {
               height: 24,
             ),
             TextFormField(
-              controller: descriptionController,
-              decoration: const InputDecoration(labelText: "Description", border: OutlineInputBorder()),
+              controller: _descriptionController,
+              decoration: const InputDecoration(
+                labelText: "Description",
+                border: OutlineInputBorder(),
+              ),
               keyboardType: TextInputType.text,
             ),
             Divider(
               height: 24,
             ),
             Row(
-              spacing: 4,
               children: [
                 Expanded(
                   child: TextFormField(
                     controller: TextEditingController(
-                        text: DateFormat('yyyy-MM-dd')
-                            .format(DateFormat('yyyy-MM-dd HH:mm').parse(transactionTimeController.text))),
+                      text: DateFormat('yyyy-MM-dd').format(
+                        DateFormat('yyyy-MM-dd HH:mm').parse(_transactionTimeController.text),
+                      ),
+                    ),
                     decoration: const InputDecoration(
                       labelText: "Date",
                       border: OutlineInputBorder(),
@@ -434,14 +441,17 @@ class EditTransactionViewState extends State<EditTransactionView> {
                     onTap: () async {
                       DateTime? pickedDate = await showDatePicker(
                         context: context,
-                        initialDate: DateFormat('yyyy-MM-dd').parse(transactionTimeController.text),
+                        initialDate: DateFormat('yyyy-MM-dd').parse(_transactionTimeController.text),
                         firstDate: DateTime(2000),
                         lastDate: DateTime.now(),
                       );
 
                       if (pickedDate != null) {
-                        final currentTime = DateFormat('HH:mm').parse(DateFormat('HH:mm')
-                            .format(DateFormat('yyyy-MM-dd HH:mm').parse(transactionTimeController.text)));
+                        final currentTime = DateFormat('HH:mm').parse(
+                          DateFormat('HH:mm').format(
+                            DateFormat('yyyy-MM-dd HH:mm').parse(_transactionTimeController.text),
+                          ),
+                        );
 
                         final combinedDateTime = DateTime(
                           pickedDate.year,
@@ -452,7 +462,7 @@ class EditTransactionViewState extends State<EditTransactionView> {
                         );
 
                         setState(() {
-                          transactionTimeController.text = DateFormat('yyyy-MM-dd HH:mm').format(combinedDateTime);
+                          _transactionTimeController.text = DateFormat('yyyy-MM-dd HH:mm').format(combinedDateTime);
                         });
                       }
                     },
@@ -461,8 +471,10 @@ class EditTransactionViewState extends State<EditTransactionView> {
                 Expanded(
                   child: TextFormField(
                     controller: TextEditingController(
-                        text: DateFormat('HH:mm')
-                            .format(DateFormat('yyyy-MM-dd HH:mm').parse(transactionTimeController.text))),
+                      text: DateFormat('HH:mm').format(
+                        DateFormat('yyyy-MM-dd HH:mm').parse(_transactionTimeController.text),
+                      ),
+                    ),
                     decoration: const InputDecoration(
                       labelText: "Time",
                       border: OutlineInputBorder(),
@@ -471,7 +483,7 @@ class EditTransactionViewState extends State<EditTransactionView> {
                     readOnly: true,
                     onTap: () async {
                       final initialTime = TimeOfDay.fromDateTime(
-                        DateFormat('yyyy-MM-dd HH:mm').parse(transactionTimeController.text),
+                        DateFormat('yyyy-MM-dd HH:mm').parse(_transactionTimeController.text),
                       );
                       TimeOfDay? pickedTime = await showTimePicker(
                         context: context,
@@ -479,8 +491,11 @@ class EditTransactionViewState extends State<EditTransactionView> {
                       );
 
                       if (pickedTime != null) {
-                        final currentDate = DateFormat('yyyy-MM-dd').parse(DateFormat('yyyy-MM-dd')
-                            .format(DateFormat('yyyy-MM-dd HH:mm').parse(transactionTimeController.text)));
+                        final currentDate = DateFormat('yyyy-MM-dd').parse(
+                          DateFormat('yyyy-MM-dd').format(
+                            DateFormat('yyyy-MM-dd HH:mm').parse(_transactionTimeController.text),
+                          ),
+                        );
 
                         final combinedDateTime = DateTime(
                           currentDate.year,
@@ -491,7 +506,7 @@ class EditTransactionViewState extends State<EditTransactionView> {
                         );
 
                         setState(() {
-                          transactionTimeController.text = DateFormat('yyyy-MM-dd HH:mm').format(combinedDateTime);
+                          _transactionTimeController.text = DateFormat('yyyy-MM-dd HH:mm').format(combinedDateTime);
                         });
                       }
                     },

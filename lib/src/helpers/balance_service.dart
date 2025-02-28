@@ -1,31 +1,22 @@
 import 'dart:convert';
-import 'package:finc/src/helpers/firestore_service.dart';
+import 'package:finc/src/helpers/authentication_service.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/account_model.dart';
 import '../models/transaction_model.dart';
+import 'hive_service.dart';
 
 class BalanceService {
-  User? _currentUser;
-  // Firestore which contain the user's data
-  final FirestoreService firestoreService = FirestoreService();
+  // locally stored data from the user's device
+  final HiveService _hiveService = HiveService();
   // Realtime Database which contain the exchange rates
   final FirebaseDatabase db = FirebaseDatabase.instance;
+  User user = AuthenticationService().getCurrentUser();
 
   BalanceService() {
     db.setPersistenceEnabled(true);
-  }
-
-  Future<User?> getCurrentUser() async {
-    if (_currentUser == null) {
-      _currentUser = FirebaseAuth.instance.currentUser;
-      if (_currentUser == null) {
-        throw Exception('No user is currently signed in.');
-      }
-    }
-    return _currentUser;
   }
 
   /// Returns exchange rates from the Realtime Database if recent (within 5 minutes),
@@ -98,9 +89,7 @@ class BalanceService {
   }
 
   Future<double> getTotalBalance(String baseCurrency) async {
-    final User? user = await getCurrentUser();
-
-    List<AccountModel> fetchedAccounts = await firestoreService.getAccounts(user!.uid);
+    List<AccountModel> fetchedAccounts = _hiveService.accountsBox.values.toList();
 
     double balance = 0.0;
 
@@ -121,10 +110,9 @@ class BalanceService {
   }
 
   Future<Map<String, double>> getMonthlyStats(String baseCurrency) async {
-    final User? user = await getCurrentUser();
     final now = DateTime.now();
     final thisMonth = DateTime(now.year, now.month, 1);
-    List<TransactionModel> monthlyTransactions = await firestoreService.getMonthlyTransactions(user!.uid, thisMonth);
+    List<TransactionModel> monthlyTransactions = await _hiveService.getMonthlyTransactions(thisMonth);
 
     double income = 0.0;
     double expense = 0.0;

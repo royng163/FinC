@@ -69,8 +69,7 @@ class AppRouter {
       ),
       GoRoute(
           path: AppRoutes.editTransaction,
-          builder: (context, state) =>
-              EditTransactionView(settingsService: settingsService, transaction: state.extra as TransactionModel)),
+          builder: (context, state) => EditTransactionView(transaction: state.extra as TransactionModel)),
       GoRoute(
         path: AppRoutes.addAccount,
         builder: (context, state) => AddAccountView(settingsService: settingsService),

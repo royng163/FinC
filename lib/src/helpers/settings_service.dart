@@ -5,7 +5,7 @@ import 'package:hive/hive.dart';
 class SettingsService with ChangeNotifier {
   static const String themeModeKey = 'themeMode';
   static const String baseCurrencyKey = 'baseCurrency';
-  late final Box<dynamic> _box;
+  final Box<dynamic> _box = HiveService().settingsBox;
 
   // The user's preferred ThemeMode and getter.
   late ThemeMode _themeMode;
@@ -14,12 +14,6 @@ class SettingsService with ChangeNotifier {
   // The user's preferred base currency and getter.
   late String _baseCurrency;
   String get baseCurrency => _baseCurrency;
-
-  /// Initialize the settings service by loading the user's settings.
-  Future<void> init() async {
-    _box = await HiveService().openBox<dynamic>('Settings');
-    await loadSettings();
-  }
 
   /// Load settings directly from the Hive box.
   Future<void> loadSettings() async {

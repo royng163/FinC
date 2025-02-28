@@ -1,11 +1,9 @@
-import 'package:finc/src/helpers/authentication_service.dart';
+import 'package:finc/src/helpers/hive_service.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_iconpicker/flutter_iconpicker.dart';
 import 'package:go_router/go_router.dart';
 import '../../components/app_routes.dart';
 import '../../models/tag_model.dart';
-import '../../helpers/firestore_service.dart';
 
 class TagsPage extends StatefulWidget {
   const TagsPage({super.key});
@@ -15,24 +13,21 @@ class TagsPage extends StatefulWidget {
 }
 
 class TagsPageState extends State<TagsPage> {
-  final FirestoreService firestore = FirestoreService();
-  final AuthenticationService authService = AuthenticationService();
-  late User user;
-  List<TagModel> tags = [];
+  final HiveService _hiveService = HiveService();
+  List<TagModel> _tags = [];
 
   @override
   void initState() {
     super.initState();
-    user = authService.getCurrentUser();
-    fetchTags();
+    _fetchTags();
   }
 
-  Future<void> fetchTags() async {
+  Future<void> _fetchTags() async {
     try {
-      final tagsSnapshot = await firestore.firestore.collection('Tags').where('userId', isEqualTo: user.uid).get();
+      final fetchedTags = await _hiveService.getTags();
 
       setState(() {
-        tags = tagsSnapshot.docs.map((doc) => TagModel.fromFirestore(doc)).toList();
+        _tags = fetchedTags;
       });
     } catch (e) {
       if (!mounted) return;
@@ -49,9 +44,9 @@ class TagsPageState extends State<TagsPage> {
         title: Text('Tags'),
       ),
       body: ListView.builder(
-        itemCount: tags.length,
+        itemCount: _tags.length,
         itemBuilder: (context, index) {
-          final tag = tags[index];
+          final tag = _tags[index];
           return ListTile(
             leading: Icon(deserializeIcon(tag.icon)?.data, color: Color(tag.color)),
             title: Text(tag.tagName),
@@ -64,7 +59,7 @@ class TagsPageState extends State<TagsPage> {
                 );
 
                 if (result == true) {
-                  fetchTags(); // Refresh the tags list after editing
+                  _fetchTags(); // Refresh the tags list after editing
                 }
               },
             ),

@@ -1,13 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:finc/src/helpers/authentication_service.dart';
 import 'package:finc/src/helpers/balance_service.dart';
-import 'package:finc/src/helpers/firestore_service.dart';
+import 'package:finc/src/helpers/hive_service.dart';
 import 'package:finc/src/models/account_model.dart';
 import 'package:finc/src/models/tag_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_iconpicker/flutter_iconpicker.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
 import '../../components/app_routes.dart';
 import '../../helpers/settings_service.dart';
@@ -25,7 +26,7 @@ class BalanceTab extends StatefulWidget {
 
 class BalanceTabState extends State<BalanceTab> {
   final BalanceService balanceService = BalanceService();
-  final FirestoreService firestore = FirestoreService();
+  final HiveService _hiveService = HiveService();
   final AuthenticationService authService = AuthenticationService();
   final ScrollController scrollController = ScrollController();
   final int pageSize = 10;
@@ -92,7 +93,7 @@ class BalanceTabState extends State<BalanceTab> {
     });
 
     try {
-      List<AccountModel> fetchedAccounts = await firestore.getAccounts(user.uid);
+      List<AccountModel> fetchedAccounts = await _hiveService.getAccounts();
       setState(() {
         accounts = fetchedAccounts;
         isLoading = false;
@@ -120,32 +121,31 @@ class BalanceTabState extends State<BalanceTab> {
     });
 
     try {
-      Query query = FirebaseFirestore.instance
-          .collection('Transactions')
-          .where('userId', isEqualTo: user.uid)
-          .orderBy('transactionTime', descending: true)
-          .limit(pageSize);
+      // Calculate starting and ending indices for pagination
+      int startIndex = transactions.length;
+      int endIndex = startIndex + pageSize;
 
-      if (lastDocument != null) {
-        query = query.startAfterDocument(lastDocument!);
-      }
+      List<TransactionModel> allTransactions = await _hiveService.getTransactions();
 
-      final transactionsSnapshot = await query.get();
-
-      if (transactionsSnapshot.docs.isEmpty) {
+      // Check if there are more transactions to load
+      if (startIndex >= allTransactions.length) {
         setState(() {
           hasMore = false;
         });
-      } else {
-        lastDocument = transactionsSnapshot.docs.last;
-        List<TransactionModel> fetchedTransactions = transactionsSnapshot.docs.map((doc) {
-          return TransactionModel.fromFirestore(doc);
-        }).toList();
-
-        setState(() {
-          transactions.addAll(fetchedTransactions);
-        });
+        return;
       }
+
+      // Apply pagination
+      endIndex = endIndex > allTransactions.length ? allTransactions.length : endIndex;
+      List<TransactionModel> fetchedTransactions = allTransactions.sublist(startIndex, endIndex);
+
+      setState(() {
+        transactions.addAll(fetchedTransactions);
+        // Set hasMore to false if we've loaded all transactions
+        if (endIndex >= allTransactions.length) {
+          hasMore = false;
+        }
+      });
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -160,7 +160,7 @@ class BalanceTabState extends State<BalanceTab> {
 
   Future<void> fetchTags() async {
     try {
-      List<TagModel> fetchedTags = await firestore.getTags(user.uid);
+      List<TagModel> fetchedTags = await _hiveService.getTags();
 
       setState(() {
         tags = {for (var tag in fetchedTags) tag.tagId: tag};
@@ -233,148 +233,165 @@ class BalanceTabState extends State<BalanceTab> {
     });
 
     return Scaffold(
-      body: Column(
-        children: [
-          Card(
-            color: Theme.of(context).cardColor,
-            surfaceTintColor: Theme.of(context).primaryColor,
-            margin: const EdgeInsets.all(8),
-            elevation: 2,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                // crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Column(
+      body: ValueListenableBuilder(
+        valueListenable: Hive.box<TransactionModel>('transactions').listenable(),
+        builder: (BuildContext context, Box<TransactionModel> box, Widget? child) {
+          return ValueListenableBuilder(
+            valueListenable: Hive.box<AccountModel>('accounts').listenable(),
+            builder: (BuildContext context, Box<AccountModel> box, Widget? child) {
+              return ValueListenableBuilder(
+                valueListenable: Hive.box<TagModel>('tags').listenable(),
+                builder: (BuildContext context, Box<TagModel> box, Widget? child) {
+                  return Column(
                     children: [
-                      const Text(
-                        'Total Balance',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                      Card(
+                        color: Theme.of(context).cardColor,
+                        surfaceTintColor: Theme.of(context).primaryColor,
+                        margin: const EdgeInsets.all(8),
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Column(
+                            // crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Column(
+                                children: [
+                                  const Text(
+                                    'Total Balance',
+                                    style: TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  Text(
+                                    totalBalance.toStringAsFixed(2),
+                                    style: const TextStyle(fontSize: 24),
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                children: [
+                                  Column(
+                                    children: [
+                                      const Text(
+                                        'Income',
+                                        style: TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                      Text(
+                                        totalIncome.toStringAsFixed(2),
+                                        style: const TextStyle(fontSize: 20),
+                                      ),
+                                    ],
+                                  ),
+                                  Column(
+                                    children: [
+                                      const Text(
+                                        'Expense',
+                                        style: TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                      Text(
+                                        totalExpense.toStringAsFixed(2),
+                                        style: const TextStyle(fontSize: 20),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                      Text(
-                        totalBalance.toStringAsFixed(2),
-                        style: const TextStyle(fontSize: 24),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      Column(
+                      const Row(
                         children: [
-                          const Text(
-                            'Income',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            totalIncome.toStringAsFixed(2),
-                            style: const TextStyle(fontSize: 20),
-                          ),
+                          Text("Transactions", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                         ],
                       ),
-                      Column(
-                        children: [
-                          const Text(
-                            'Expense',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            totalExpense.toStringAsFixed(2),
-                            style: const TextStyle(fontSize: 20),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const Row(
-            children: [
-              Text("Transactions", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          Expanded(
-            child: ListView.builder(
-              controller: scrollController,
-              itemCount: items.length + (hasMore ? 1 : 0),
-              itemBuilder: (BuildContext context, int index) {
-                if (index == items.length) {
-                  return isLoading ? const Center(child: CircularProgressIndicator()) : const SizedBox.shrink();
-                }
+                      Expanded(
+                        child: ListView.builder(
+                          controller: scrollController,
+                          itemCount: items.length + (hasMore ? 1 : 0),
+                          itemBuilder: (BuildContext context, int index) {
+                            if (index == items.length) {
+                              return isLoading
+                                  ? const Center(child: CircularProgressIndicator())
+                                  : const SizedBox.shrink();
+                            }
 
-                final item = items[index];
-                if (item is String) {
-                  // Date header
-                  return Container(
-                      color: Theme.of(context).splashColor, child: Text(item, style: const TextStyle(fontSize: 16)));
-                } else if (item is TransactionModel) {
-                  final transaction = item;
-                  final transactionTags = transaction.tags.map((tagId) => tags[tagId]).toList();
-                  // Retrieve account information using accountId
-                  final account = accounts.firstWhere((account) => account.accountId == transaction.accountId,
-                      orElse: () => throw StateError('No account found for accountId: ${transaction.accountId}'));
-                  final accountTag = TagModel(
-                    tagId: "",
-                    userId: "",
-                    tagName: account.accountName,
-                    tagType: TagType.methods,
-                    icon: account.icon,
-                    color: account.color,
-                  );
-                  // Prepend the new tag object to the transactionTags list
-                  transactionTags.insert(0, accountTag);
-                  return ListTile(
-                    title: Text(getTransactionName(transaction), style: TextStyle(fontSize: 16)),
-                    subtitle: Wrap(
-                      children: transactionTags
-                          .map((tag) => Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 3.0, vertical: 1.0),
-                                margin: const EdgeInsets.only(top: 4.0, right: 4.0),
-                                decoration: BoxDecoration(
-                                  color: Color(tag!.color).withAlpha(100),
-                                  borderRadius: BorderRadius.circular(5.0),
+                            final item = items[index];
+                            if (item is String) {
+                              // Date header
+                              return Container(
+                                  color: Theme.of(context).splashColor,
+                                  child: Text(item, style: const TextStyle(fontSize: 16)));
+                            } else if (item is TransactionModel) {
+                              final transaction = item;
+                              final transactionTags = transaction.tags.map((tagId) => tags[tagId]).toList();
+                              // Retrieve account information using accountId
+                              final account = accounts.firstWhere(
+                                  (account) => account.accountId == transaction.accountId,
+                                  orElse: () =>
+                                      throw StateError('No account found for accountId: ${transaction.accountId}'));
+                              final accountTag = TagModel(
+                                tagId: "",
+                                userId: "",
+                                tagName: account.accountName,
+                                tagType: TagType.methods,
+                                icon: account.icon,
+                                color: account.color,
+                              );
+                              // Prepend the new tag object to the transactionTags list
+                              transactionTags.insert(0, accountTag);
+                              return ListTile(
+                                title: Text(getTransactionName(transaction), style: TextStyle(fontSize: 16)),
+                                subtitle: Wrap(
+                                  children: transactionTags
+                                      .map((tag) => Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 3.0, vertical: 1.0),
+                                            margin: const EdgeInsets.only(top: 4.0, right: 4.0),
+                                            decoration: BoxDecoration(
+                                              color: Color(tag!.color).withAlpha(100),
+                                              borderRadius: BorderRadius.circular(5.0),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(
+                                                  deserializeIcon(tag.icon)?.data,
+                                                  size: 14,
+                                                  color: Color(tag.color),
+                                                ),
+                                                const SizedBox(width: 4.0),
+                                                Text(
+                                                  tag.tagName,
+                                                  style: const TextStyle(fontSize: 14),
+                                                ),
+                                              ],
+                                            ),
+                                          ))
+                                      .toList(),
                                 ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      deserializeIcon(tag.icon)?.data,
-                                      size: 14,
-                                      color: Color(tag.color),
-                                    ),
-                                    const SizedBox(width: 4.0),
-                                    Text(
-                                      tag.tagName,
-                                      style: const TextStyle(fontSize: 14),
-                                    ),
-                                  ],
+                                trailing: Text(
+                                  getDisplayAmount(transaction),
+                                  style: const TextStyle(fontSize: 18),
                                 ),
-                              ))
-                          .toList(),
-                    ),
-                    trailing: Text(
-                      getDisplayAmount(transaction),
-                      style: const TextStyle(fontSize: 18),
-                    ),
-                    onTap: () async {
-                      final result = await context.push(
-                        AppRoutes.editTransaction,
-                        extra: transaction,
-                      );
-                      if (result == true) {
-                        refreshData();
-                      }
-                    },
+                                onTap: () async {
+                                  await context.push(
+                                    AppRoutes.editTransaction,
+                                    extra: transaction,
+                                  );
+                                },
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          },
+                        ),
+                      ),
+                    ],
                   );
-                }
-                return const SizedBox.shrink();
-              },
-            ),
-          ),
-        ],
+                },
+              );
+            },
+          );
+        },
       ),
     );
   }

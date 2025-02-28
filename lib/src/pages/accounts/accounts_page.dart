@@ -1,8 +1,6 @@
 import 'package:adaptive_navigation/adaptive_navigation.dart';
-import 'package:finc/src/helpers/authentication_service.dart';
 import 'package:finc/src/helpers/balance_service.dart';
-import 'package:finc/src/helpers/firestore_service.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:finc/src/helpers/hive_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_iconpicker/flutter_iconpicker.dart';
@@ -24,36 +22,33 @@ class AccountsPage extends StatefulWidget {
 }
 
 class AccountsPageState extends State<AccountsPage> {
-  final BalanceService balanceService = BalanceService();
-  final FirestoreService firestoreService = FirestoreService();
-  final AuthenticationService authService = AuthenticationService();
-  late User user;
-  List<AccountModel> accounts = [];
-  List<TransactionModel> transactions = [];
-  Map<String, TagModel> tags = {};
-  bool isLoadingAccounts = true;
-  bool isLoadingTransactions = false;
-  int selectedIndex = 0;
+  final BalanceService _balanceService = BalanceService();
+  final HiveService _hiveService = HiveService();
+  List<AccountModel> _accounts = [];
+  List<TransactionModel> _transactions = [];
+  Map<String, TagModel> _tags = {};
+  bool _isLoadingAccounts = true;
+  bool _isLoadingTransactions = false;
+  int _selectedIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    user = authService.getCurrentUser();
     fetchAccounts();
     fetchTags();
   }
 
   Future<void> fetchAccounts() async {
     setState(() {
-      isLoadingAccounts = true;
+      _isLoadingAccounts = true;
     });
 
     try {
-      accounts = await firestoreService.getAccounts(user.uid);
+      _accounts = await _hiveService.getAccounts();
 
       setState(() {
-        if (accounts.isNotEmpty) {
-          fetchTransactions(accounts[0].accountId);
+        if (_accounts.isNotEmpty) {
+          fetchTransactions(_accounts[0].accountId);
         }
       });
     } catch (e) {
@@ -63,17 +58,17 @@ class AccountsPageState extends State<AccountsPage> {
       );
     } finally {
       setState(() {
-        isLoadingAccounts = false;
+        _isLoadingAccounts = false;
       });
     }
   }
 
   Future<void> fetchTags() async {
     try {
-      List<TagModel> fetchedTags = await firestoreService.getTags(user.uid);
+      List<TagModel> fetchedTags = await _hiveService.getTags();
 
       setState(() {
-        tags = {for (var tag in fetchedTags) tag.tagId: tag};
+        _tags = {for (var tag in fetchedTags) tag.tagId: tag};
       });
     } catch (e) {
       if (!mounted) return;
@@ -85,11 +80,11 @@ class AccountsPageState extends State<AccountsPage> {
 
   Future<void> fetchTransactions(String accountId) async {
     setState(() {
-      isLoadingTransactions = true;
+      _isLoadingTransactions = true;
     });
 
     try {
-      transactions = await firestoreService.getAccountTransactions(user.uid, accountId);
+      _transactions = await _hiveService.getAccountTransactions(accountId);
 
       setState(() {});
     } catch (e) {
@@ -99,7 +94,7 @@ class AccountsPageState extends State<AccountsPage> {
       );
     } finally {
       setState(() {
-        isLoadingTransactions = false;
+        _isLoadingTransactions = false;
       });
     }
   }
@@ -114,12 +109,12 @@ class AccountsPageState extends State<AccountsPage> {
   String getTransactionName(TransactionModel transaction) {
     // Display corresponding transaction name for transfer transactions
     if (transaction.transactionType == TransactionType.transfer) {
-      if (transaction.accountId == accounts[selectedIndex].accountId) {
+      if (transaction.accountId == _accounts[_selectedIndex].accountId) {
         // Transfer to the destination account with Id stored in transactionName
-        return 'To ${accounts.firstWhere((account) => account.accountId == transaction.transactionName).accountName}';
+        return 'To ${_accounts.firstWhere((account) => account.accountId == transaction.transactionName).accountName}';
       } else {
         // Transfer from another account
-        return 'From ${accounts.firstWhere((account) => account.accountId == transaction.accountId).accountName}';
+        return 'From ${_accounts.firstWhere((account) => account.accountId == transaction.accountId).accountName}';
       }
     }
     // Simply return the transaction name for other transaction types
@@ -133,7 +128,7 @@ class AccountsPageState extends State<AccountsPage> {
         symbol = '-';
         break;
       case TransactionType.transfer:
-        if (transaction.accountId == accounts[selectedIndex].accountId) {
+        if (transaction.accountId == _accounts[_selectedIndex].accountId) {
           symbol = '-';
         } else {
           symbol = '';
@@ -158,27 +153,28 @@ class AccountsPageState extends State<AccountsPage> {
           ),
         ],
       ),
-      body: isLoadingAccounts
+      body: _isLoadingAccounts
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxHeight: 200),
                   child: PageView.builder(
-                    itemCount: accounts.length,
+                    itemCount: _accounts.length,
                     controller: PageController(viewportFraction: 0.8),
                     onPageChanged: (index) {
                       setState(() {
-                        selectedIndex = index;
-                        fetchTransactions(accounts[index].accountId);
+                        _selectedIndex = index;
+                        fetchTransactions(_accounts[index].accountId);
                       });
                     },
                     itemBuilder: (context, index) {
-                      final account = accounts[index];
+                      final account = _accounts[index];
                       final Color backgroundColor = Color(account.color);
                       final Color textColor = getTextColor(backgroundColor);
                       return FutureBuilder<double>(
-                        future: balanceService.getAccountBalance(account.balances, widget.settingsService.baseCurrency),
+                        future:
+                            _balanceService.getAccountBalance(account.balances, widget.settingsService.baseCurrency),
                         builder: (context, snapshot) {
                           double accountBalance = snapshot.data ?? 0.0;
                           return GestureDetector(
@@ -233,14 +229,14 @@ class AccountsPageState extends State<AccountsPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                isLoadingTransactions
+                _isLoadingTransactions
                     ? const Center(child: CircularProgressIndicator())
                     : Expanded(
                         child: ListView.builder(
-                          itemCount: transactions.length,
+                          itemCount: _transactions.length,
                           itemBuilder: (context, index) {
-                            final transaction = transactions[index];
-                            final transactionTags = transaction.tags.map((tagId) => tags[tagId]).toList();
+                            final transaction = _transactions[index];
+                            final transactionTags = transaction.tags.map((tagId) => _tags[tagId]).toList();
                             return ListTile(
                               title: Text(getTransactionName(transaction)),
                               subtitle: Wrap(
@@ -290,7 +286,7 @@ class AccountsPageState extends State<AccountsPage> {
                                   extra: transaction,
                                 );
                                 if (result == true) {
-                                  fetchTransactions(accounts[selectedIndex].accountId);
+                                  fetchTransactions(_accounts[_selectedIndex].accountId);
                                 } else if (result == 'deleted') {
                                   fetchAccounts();
                                 }

@@ -4,8 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter_iconpicker/Models/configuration.dart';
 import 'package:flutter_iconpicker/flutter_iconpicker.dart';
+import '../../helpers/hive_service.dart';
 import '../../models/tag_model.dart';
-import '../../helpers/firestore_service.dart';
 
 class EditTagView extends StatefulWidget {
   final TagModel tag;
@@ -17,27 +17,27 @@ class EditTagView extends StatefulWidget {
 }
 
 class EditTagViewState extends State<EditTagView> {
-  final FirestoreService firestoreService = FirestoreService();
-  final AuthenticationService authService = AuthenticationService();
-  final TextEditingController tagNameController = TextEditingController();
-  late User user;
-  late Color selectedColor;
-  late IconPickerIcon? selectedIcon;
-  late TagType selectedTagType;
+  final HiveService _hiveService = HiveService();
+  final AuthenticationService _authService = AuthenticationService();
+  final TextEditingController _tagNameController = TextEditingController();
+  late User _user;
+  late Color _selectedColor;
+  late IconPickerIcon? _selectedIcon;
+  late TagType _selectedTagType;
 
   @override
   void initState() {
     super.initState();
-    user = authService.getCurrentUser();
-    tagNameController.text = widget.tag.tagName;
-    selectedColor = Color(widget.tag.color);
-    selectedIcon = deserializeIcon(widget.tag.icon);
-    selectedTagType = widget.tag.tagType;
+    _user = _authService.getCurrentUser();
+    _tagNameController.text = widget.tag.tagName;
+    _selectedColor = Color(widget.tag.color);
+    _selectedIcon = deserializeIcon(widget.tag.icon);
+    _selectedTagType = widget.tag.tagType;
   }
 
   @override
   void dispose() {
-    tagNameController.dispose();
+    _tagNameController.dispose();
     super.dispose();
   }
 
@@ -45,15 +45,15 @@ class EditTagViewState extends State<EditTagView> {
     try {
       final TagModel updatedTag = TagModel(
         tagId: widget.tag.tagId,
-        userId: user.uid,
-        tagName: tagNameController.text,
-        tagType: selectedTagType,
-        icon: serializeIcon(selectedIcon!) ?? {},
+        userId: _user.uid,
+        tagName: _tagNameController.text,
+        tagType: _selectedTagType,
+        icon: serializeIcon(_selectedIcon!) ?? {},
         // ignore: deprecated_member_use
-        color: selectedColor.value,
+        color: _selectedColor.value,
       );
 
-      await firestoreService.setTag(updatedTag);
+      await _hiveService.setTag(updatedTag);
 
       if (!mounted) return;
 
@@ -79,10 +79,10 @@ class EditTagViewState extends State<EditTagView> {
           title: const Text('Pick a color'),
           content: SingleChildScrollView(
             child: ColorPicker(
-              color: selectedColor,
+              color: _selectedColor,
               onColorChanged: (color) {
                 setState(() {
-                  selectedColor = color;
+                  _selectedColor = color;
                 });
               },
               heading: Text(
@@ -109,13 +109,13 @@ class EditTagViewState extends State<EditTagView> {
   }
 
   void pickIcon() async {
-    selectedIcon = await showIconPicker(
+    _selectedIcon = await showIconPicker(
       context,
       configuration: SinglePickerConfiguration(
         iconPackModes: [IconPack.fontAwesomeIcons],
       ),
     );
-    if (selectedIcon != null) {
+    if (_selectedIcon != null) {
       setState(() {});
     }
   }
@@ -137,26 +137,26 @@ class EditTagViewState extends State<EditTagView> {
                   children: [
                     ChoiceChip(
                       label: const Text('Category'),
-                      selected: selectedTagType == TagType.categories,
+                      selected: _selectedTagType == TagType.categories,
                       onSelected: (selected) {
                         setState(() {
-                          selectedTagType = TagType.categories;
+                          _selectedTagType = TagType.categories;
                         });
                       },
                     ),
                     ChoiceChip(
                       label: const Text('Method'),
-                      selected: selectedTagType == TagType.methods,
+                      selected: _selectedTagType == TagType.methods,
                       onSelected: (selected) {
                         setState(() {
-                          selectedTagType = TagType.methods;
+                          _selectedTagType = TagType.methods;
                         });
                       },
                     ),
                   ],
                 ),
                 TextFormField(
-                  controller: tagNameController,
+                  controller: _tagNameController,
                   decoration: const InputDecoration(
                       labelText: "Tag Name", hintText: "e.g. Groceries", border: OutlineInputBorder()),
                   keyboardType: TextInputType.text,
@@ -176,7 +176,7 @@ class EditTagViewState extends State<EditTagView> {
                     Container(
                       width: 24,
                       height: 24,
-                      color: selectedColor,
+                      color: _selectedColor,
                     ),
                   ],
                 ),
@@ -186,7 +186,7 @@ class EditTagViewState extends State<EditTagView> {
                       onPressed: pickIcon,
                       child: const Text('Pick Icon'),
                     ),
-                    if (selectedIcon != null) Icon(selectedIcon!.data, color: selectedColor),
+                    if (_selectedIcon != null) Icon(_selectedIcon!.data, color: _selectedColor),
                   ],
                 ),
                 ElevatedButton(

@@ -1,6 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:finc/src/helpers/hive_service.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_iconpicker/Models/configuration.dart';
 import 'package:flutter_iconpicker/flutter_iconpicker.dart';
 import '../../helpers/authentication_service.dart';
@@ -21,30 +22,31 @@ class AddAccountView extends StatefulWidget {
 }
 
 class AddAccountViewState extends State<AddAccountView> {
-  final FirestoreService firestoreService = FirestoreService();
-  final AuthenticationService authService = AuthenticationService();
-  final TextEditingController accountNameController = TextEditingController();
-  final List<TextEditingController> balanceControllers = [];
-  final List<TextEditingController> currencyControllers = [];
-  late User user;
-  Color selectedColor = Colors.grey;
-  IconPickerIcon? selectedIcon;
-  AccountType selectedAccountType = AccountType.bank;
+  final _firestoreService = FirestoreService();
+  final _hiveService = HiveService();
+  final _authService = AuthenticationService();
+  final _accountNameController = TextEditingController();
+  final List<TextEditingController> _balanceControllers = [];
+  final List<TextEditingController> _currencyControllers = [];
+  late User _user;
+  Color _selectedColor = Colors.grey;
+  IconPickerIcon? _selectedIcon;
+  AccountType _selectedAccountType = AccountType.bank;
 
   @override
   void initState() {
     super.initState();
-    user = authService.getCurrentUser();
+    _user = _authService.getCurrentUser();
     addCurrencyField(widget.settingsService.baseCurrency, '0.0');
   }
 
   @override
   void dispose() {
-    accountNameController.dispose();
-    for (var controller in balanceControllers) {
+    _accountNameController.dispose();
+    for (var controller in _balanceControllers) {
       controller.dispose();
     }
-    for (var controller in currencyControllers) {
+    for (var controller in _currencyControllers) {
       controller.dispose();
     }
     super.dispose();
@@ -54,42 +56,42 @@ class AddAccountViewState extends State<AddAccountView> {
     final currencyController = TextEditingController(text: currency);
     final balanceController = TextEditingController(text: balance);
     setState(() {
-      currencyControllers.add(currencyController);
-      balanceControllers.add(balanceController);
+      _currencyControllers.add(currencyController);
+      _balanceControllers.add(balanceController);
     });
   }
 
   void removeCurrencyField(int index) {
     setState(() {
-      currencyControllers[index].dispose();
-      balanceControllers[index].dispose();
-      currencyControllers.removeAt(index);
-      balanceControllers.removeAt(index);
+      _currencyControllers[index].dispose();
+      _balanceControllers[index].dispose();
+      _currencyControllers.removeAt(index);
+      _balanceControllers.removeAt(index);
     });
   }
 
   void addAccount() async {
     try {
       final Map<String, double> balances = {};
-      for (int i = 0; i < currencyControllers.length; i++) {
-        final currency = currencyControllers[i].text;
-        final balance = double.parse(balanceControllers[i].text);
+      for (int i = 0; i < _currencyControllers.length; i++) {
+        final currency = _currencyControllers[i].text;
+        final balance = double.parse(_balanceControllers[i].text);
         balances[currency] = balance;
       }
 
       final AccountModel account = AccountModel(
-        accountId: firestoreService.firestore.collection('Accounts').doc().id,
-        userId: user.uid,
-        accountType: selectedAccountType,
-        accountName: accountNameController.text,
+        accountId: _firestoreService.firestore.collection('Accounts').doc().id,
+        userId: _user.uid,
+        accountType: _selectedAccountType,
+        accountName: _accountNameController.text,
         balances: balances,
-        icon: serializeIcon(selectedIcon!) ?? {},
+        icon: serializeIcon(_selectedIcon!) ?? {},
         // ignore: deprecated_member_use
-        color: selectedColor.value,
+        color: _selectedColor.value,
         createdAt: Timestamp.now(),
       );
 
-      await firestoreService.setAccount(account);
+      await _hiveService.setAccount(account);
 
       if (!mounted) return;
 
@@ -99,16 +101,16 @@ class AddAccountViewState extends State<AddAccountView> {
       );
 
       // Clear the form
-      accountNameController.clear();
-      for (var controller in balanceControllers) {
+      _accountNameController.clear();
+      for (var controller in _balanceControllers) {
         controller.clear();
       }
-      for (var controller in currencyControllers) {
+      for (var controller in _currencyControllers) {
         controller.clear();
       }
       setState(() {
-        selectedColor = Colors.grey;
-        selectedAccountType = AccountType.bank;
+        _selectedColor = Colors.grey;
+        _selectedAccountType = AccountType.bank;
       });
 
       Navigator.pop(context, true);
@@ -128,10 +130,10 @@ class AddAccountViewState extends State<AddAccountView> {
           title: const Text('Pick a color'),
           content: SingleChildScrollView(
             child: ColorPicker(
-              color: selectedColor,
+              color: _selectedColor,
               onColorChanged: (color) {
                 setState(() {
-                  selectedColor = color;
+                  _selectedColor = color;
                 });
               },
               heading: Text(
@@ -158,13 +160,13 @@ class AddAccountViewState extends State<AddAccountView> {
   }
 
   void pickIcon() async {
-    selectedIcon = await showIconPicker(
+    _selectedIcon = await showIconPicker(
       context,
       configuration: SinglePickerConfiguration(
         iconPackModes: [IconPack.fontAwesomeIcons],
       ),
     );
-    if (selectedIcon != null) {
+    if (_selectedIcon != null) {
       setState(() {});
     }
   }
@@ -191,11 +193,11 @@ class AddAccountViewState extends State<AddAccountView> {
                           .last
                           .replaceAllMapped(RegExp(r'([a-z])([A-Z])'), (Match m) => "${m[1]} ${m[2]}")
                           .replaceFirstMapped(RegExp(r'^[a-z]'), (Match m) => m[0]!.toUpperCase())),
-                      selected: selectedAccountType == type,
+                      selected: _selectedAccountType == type,
                       onSelected: (bool selected) {
                         setState(() {
                           if (selected) {
-                            selectedAccountType = type;
+                            _selectedAccountType = type;
                           }
                         });
                       },
@@ -203,7 +205,7 @@ class AddAccountViewState extends State<AddAccountView> {
                   }).toList(),
                 ),
                 TextFormField(
-                  controller: accountNameController,
+                  controller: _accountNameController,
                   decoration: const InputDecoration(
                       labelText: "Account Name", hintText: "e.g. Cash", border: OutlineInputBorder()),
                   keyboardType: TextInputType.text,
@@ -216,14 +218,14 @@ class AddAccountViewState extends State<AddAccountView> {
                 ),
                 ListView.builder(
                   shrinkWrap: true,
-                  itemCount: currencyControllers.length,
+                  itemCount: _currencyControllers.length,
                   itemBuilder: (context, index) {
                     return Row(
                       spacing: 8,
                       children: [
                         Expanded(
                           child: TextFormField(
-                            controller: currencyControllers[index],
+                            controller: _currencyControllers[index],
                             readOnly: true,
                             decoration: const InputDecoration(
                               labelText: "Currency",
@@ -234,7 +236,7 @@ class AddAccountViewState extends State<AddAccountView> {
                                 context: context,
                                 onSelect: (Currency currency) {
                                   setState(() {
-                                    currencyControllers[index].text = currency.code;
+                                    _currencyControllers[index].text = currency.code;
                                   });
                                 },
                               );
@@ -249,7 +251,7 @@ class AddAccountViewState extends State<AddAccountView> {
                         ),
                         Expanded(
                           child: TextFormField(
-                            controller: balanceControllers[index],
+                            controller: _balanceControllers[index],
                             decoration: const InputDecoration(
                                 labelText: "Balance", hintText: "e.g. 1000.0", border: OutlineInputBorder()),
                             keyboardType: TextInputType.numberWithOptions(decimal: true),
@@ -297,7 +299,7 @@ class AddAccountViewState extends State<AddAccountView> {
                     Container(
                       width: 24,
                       height: 24,
-                      color: selectedColor,
+                      color: _selectedColor,
                     ),
                   ],
                 ),
@@ -307,7 +309,7 @@ class AddAccountViewState extends State<AddAccountView> {
                       onPressed: pickIcon,
                       child: const Text('Pick Icon'),
                     ),
-                    if (selectedIcon != null) Icon(selectedIcon!.data, color: selectedColor),
+                    if (_selectedIcon != null) Icon(_selectedIcon!.data, color: _selectedColor),
                   ],
                 ),
                 ElevatedButton(

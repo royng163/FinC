@@ -1,4 +1,5 @@
 import 'package:finc/src/helpers/authentication_service.dart';
+import 'package:finc/src/helpers/hive_service.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
@@ -7,7 +8,6 @@ import 'package:flutter_iconpicker/flutter_iconpicker.dart';
 import 'package:currency_picker/currency_picker.dart';
 import 'package:flutter/services.dart';
 import '../../models/account_model.dart';
-import '../../helpers/firestore_service.dart';
 
 class EditAccountView extends StatefulWidget {
   final AccountModel account;
@@ -22,85 +22,82 @@ class EditAccountView extends StatefulWidget {
 }
 
 class EditAccountViewState extends State<EditAccountView> {
-  final FirestoreService firestoreService = FirestoreService();
-  final AuthenticationService authService = AuthenticationService();
-  final TextEditingController accountNameController = TextEditingController();
-  final List<TextEditingController> balanceControllers = [];
-  final List<TextEditingController> currencyControllers = [];
-  late User user;
-  late Color selectedColor;
-  late IconPickerIcon? selectedIcon;
-  late AccountType selectedAccountType;
+  final _hiveService = HiveService();
+  final _authService = AuthenticationService();
+  final _accountNameController = TextEditingController();
+  final _balanceControllers = <TextEditingController>[];
+  final _currencyControllers = <TextEditingController>[];
+  late User _user;
+  late Color _selectedColor;
+  late IconPickerIcon? _selectedIcon;
+  late AccountType _selectedAccountType;
 
   @override
   void initState() {
     super.initState();
-    user = authService.getCurrentUser();
-    accountNameController.text = widget.account.accountName;
-    selectedColor = Color(widget.account.color);
-    selectedIcon = deserializeIcon(widget.account.icon);
-    selectedAccountType = widget.account.accountType;
+    _user = _authService.getCurrentUser();
+    _accountNameController.text = widget.account.accountName;
+    _selectedColor = Color(widget.account.color);
+    _selectedIcon = deserializeIcon(widget.account.icon);
+    _selectedAccountType = widget.account.accountType;
 
     widget.account.balances.forEach((currency, balance) {
-      addCurrencyField(currency, balance.toString());
+      _addCurrencyField(currency, balance.toString());
     });
   }
 
   @override
   void dispose() {
-    accountNameController.dispose();
-    for (var controller in balanceControllers) {
+    _accountNameController.dispose();
+    for (var controller in _balanceControllers) {
       controller.dispose();
     }
-    for (var controller in currencyControllers) {
+    for (var controller in _currencyControllers) {
       controller.dispose();
     }
     super.dispose();
   }
 
-  void addCurrencyField(String currency, String balance) {
+  void _addCurrencyField(String currency, String balance) {
     final currencyController = TextEditingController(text: currency);
     final balanceController = TextEditingController(text: balance);
     setState(() {
-      currencyControllers.add(currencyController);
-      balanceControllers.add(balanceController);
+      _currencyControllers.add(currencyController);
+      _balanceControllers.add(balanceController);
     });
   }
 
-  void removeCurrencyField(int index) {
+  void _removeCurrencyField(int index) {
     setState(() {
-      currencyControllers[index].dispose();
-      balanceControllers[index].dispose();
-      currencyControllers.removeAt(index);
-      balanceControllers.removeAt(index);
+      _currencyControllers[index].dispose();
+      _balanceControllers[index].dispose();
+      _currencyControllers.removeAt(index);
+      _balanceControllers.removeAt(index);
     });
   }
 
-  void editAccount() async {
+  void _editAccount() async {
     try {
       final Map<String, double> balances = {};
-      for (int i = 0; i < currencyControllers.length; i++) {
-        final currency = currencyControllers[i].text;
-        final balance = double.parse(balanceControllers[i].text);
+      for (int i = 0; i < _currencyControllers.length; i++) {
+        final currency = _currencyControllers[i].text;
+        final balance = double.parse(_balanceControllers[i].text);
         balances[currency] = balance;
       }
 
       final AccountModel updatedAccount = AccountModel(
         accountId: widget.account.accountId,
-        userId: user.uid,
-        accountType: selectedAccountType,
-        accountName: accountNameController.text,
+        userId: _user.uid,
+        accountType: _selectedAccountType,
+        accountName: _accountNameController.text,
         balances: balances,
-        icon: serializeIcon(selectedIcon!) ?? {},
+        icon: serializeIcon(_selectedIcon!) ?? {},
         // ignore: deprecated_member_use
-        color: selectedColor.value,
+        color: _selectedColor.value,
         createdAt: widget.account.createdAt,
       );
 
-      await firestoreService.firestore
-          .collection('Accounts')
-          .doc(widget.account.accountId)
-          .update(updatedAccount.toFirestore());
+      await _hiveService.setAccount(updatedAccount);
 
       if (!mounted) return;
 
@@ -118,9 +115,9 @@ class EditAccountViewState extends State<EditAccountView> {
     }
   }
 
-  Future<void> deleteAccount() async {
+  Future<void> _deleteAccount() async {
     try {
-      await firestoreService.deleteAccount(user.uid, widget.account.accountId, widget.account.accountName);
+      await _hiveService.deleteAccount(widget.account.accountId, widget.account.accountName);
 
       if (!mounted) return;
 
@@ -138,7 +135,7 @@ class EditAccountViewState extends State<EditAccountView> {
     }
   }
 
-  void pickColor() {
+  void _pickColor() {
     showDialog(
       context: context,
       builder: (context) {
@@ -146,10 +143,10 @@ class EditAccountViewState extends State<EditAccountView> {
           title: const Text('Pick a color'),
           content: SingleChildScrollView(
             child: ColorPicker(
-              color: selectedColor,
+              color: _selectedColor,
               onColorChanged: (color) {
                 setState(() {
-                  selectedColor = color;
+                  _selectedColor = color;
                 });
               },
               heading: Text(
@@ -175,14 +172,14 @@ class EditAccountViewState extends State<EditAccountView> {
     );
   }
 
-  void pickIcon() async {
-    selectedIcon = await showIconPicker(
+  void _pickIcon() async {
+    _selectedIcon = await showIconPicker(
       context,
       configuration: SinglePickerConfiguration(
         iconPackModes: [IconPack.fontAwesomeIcons],
       ),
     );
-    if (selectedIcon != null) {
+    if (_selectedIcon != null) {
       setState(() {});
     }
   }
@@ -195,7 +192,7 @@ class EditAccountViewState extends State<EditAccountView> {
         actions: [
           IconButton(
             icon: const Icon(Icons.delete),
-            onPressed: deleteAccount,
+            onPressed: _deleteAccount,
           ),
         ],
       ),
@@ -214,11 +211,11 @@ class EditAccountViewState extends State<EditAccountView> {
                         .last
                         .replaceAllMapped(RegExp(r'([a-z])([A-Z])'), (Match m) => "${m[1]} ${m[2]}")
                         .replaceFirstMapped(RegExp(r'^[a-z]'), (Match m) => m[0]!.toUpperCase())),
-                    selected: selectedAccountType == type,
+                    selected: _selectedAccountType == type,
                     onSelected: (bool selected) {
                       setState(() {
                         if (selected) {
-                          selectedAccountType = type;
+                          _selectedAccountType = type;
                         }
                       });
                     },
@@ -226,7 +223,7 @@ class EditAccountViewState extends State<EditAccountView> {
                 }).toList(),
               ),
               TextFormField(
-                controller: accountNameController,
+                controller: _accountNameController,
                 decoration: const InputDecoration(
                     labelText: "Account Name", hintText: "e.g. Cash", border: OutlineInputBorder()),
                 keyboardType: TextInputType.text,
@@ -239,13 +236,13 @@ class EditAccountViewState extends State<EditAccountView> {
               ),
               ListView.builder(
                 shrinkWrap: true,
-                itemCount: currencyControllers.length,
+                itemCount: _currencyControllers.length,
                 itemBuilder: (context, index) {
                   return Row(
                     children: [
                       Expanded(
                         child: TextFormField(
-                          controller: currencyControllers[index],
+                          controller: _currencyControllers[index],
                           readOnly: true,
                           decoration: const InputDecoration(
                             labelText: "Currency",
@@ -256,7 +253,7 @@ class EditAccountViewState extends State<EditAccountView> {
                               context: context,
                               onSelect: (Currency currency) {
                                 setState(() {
-                                  currencyControllers[index].text = currency.code;
+                                  _currencyControllers[index].text = currency.code;
                                 });
                               },
                             );
@@ -271,12 +268,11 @@ class EditAccountViewState extends State<EditAccountView> {
                       ),
                       Expanded(
                         child: TextFormField(
-                          controller: balanceControllers[index],
+                          controller: _balanceControllers[index],
                           decoration: const InputDecoration(
                               labelText: "Balance", hintText: "e.g. 1000.0", border: OutlineInputBorder()),
                           keyboardType: TextInputType.numberWithOptions(decimal: true),
                           inputFormatters: [
-                            // Allow only numbers, decimal point, and negative sign, and limit to two decimal places
                             FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d{0,2}')),
                           ],
                           validator: (value) {
@@ -300,7 +296,7 @@ class EditAccountViewState extends State<EditAccountView> {
                       IconButton(
                         icon: const Icon(Icons.remove_circle),
                         onPressed: () {
-                          removeCurrencyField(index);
+                          _removeCurrencyField(index);
                         },
                       ),
                     ],
@@ -309,34 +305,34 @@ class EditAccountViewState extends State<EditAccountView> {
               ),
               ElevatedButton(
                 onPressed: () {
-                  addCurrencyField('', '0.0');
+                  _addCurrencyField('', '0.0');
                 },
                 child: const Text("Add Currency"),
               ),
               Row(
                 children: [
                   ElevatedButton(
-                    onPressed: pickColor,
+                    onPressed: _pickColor,
                     child: const Text('Pick Color'),
                   ),
                   Container(
                     width: 24,
                     height: 24,
-                    color: selectedColor,
+                    color: _selectedColor,
                   ),
                 ],
               ),
               Row(
                 children: [
                   ElevatedButton(
-                    onPressed: pickIcon,
+                    onPressed: _pickIcon,
                     child: const Text('Pick Icon'),
                   ),
-                  if (selectedIcon != null) Icon(selectedIcon!.data, color: selectedColor),
+                  if (_selectedIcon != null) Icon(_selectedIcon!.data, color: _selectedColor),
                 ],
               ),
               ElevatedButton(
-                onPressed: editAccount,
+                onPressed: _editAccount,
                 child: const Text("Save Changes"),
               ),
             ],
