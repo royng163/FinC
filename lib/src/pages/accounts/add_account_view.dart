@@ -177,146 +177,150 @@ class AddAccountViewState extends State<AddAccountView> {
         appBar: AppBar(
           title: const Text('New Account'),
         ),
-        body: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Form(
-            child: Column(
-              spacing: 8,
-              children: [
-                Wrap(
-                  spacing: 8.0,
-                  children: AccountType.values.map((AccountType type) {
-                    return ChoiceChip(
-                      label: Text(type
-                          .toString()
-                          .split('.')
-                          .last
-                          .replaceAllMapped(RegExp(r'([a-z])([A-Z])'), (Match m) => "${m[1]} ${m[2]}")
-                          .replaceFirstMapped(RegExp(r'^[a-z]'), (Match m) => m[0]!.toUpperCase())),
-                      selected: _selectedAccountType == type,
-                      onSelected: (bool selected) {
-                        setState(() {
-                          if (selected) {
-                            _selectedAccountType = type;
-                          }
-                        });
-                      },
-                    );
-                  }).toList(),
-                ),
-                TextFormField(
-                  controller: _accountNameController,
-                  decoration: const InputDecoration(
-                      labelText: "Account Name", hintText: "e.g. Cash", border: OutlineInputBorder()),
-                  keyboardType: TextInputType.text,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter an account name';
-                    }
-                    return null;
-                  },
-                ),
-                ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: _currencyControllers.length,
-                  itemBuilder: (context, index) {
-                    return Row(
-                      spacing: 8,
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _currencyControllers[index],
-                            readOnly: true,
-                            decoration: const InputDecoration(
-                              labelText: "Currency",
-                              border: OutlineInputBorder(),
-                            ),
-                            onTap: () {
-                              showCurrencyPicker(
-                                context: context,
-                                onSelect: (Currency currency) {
-                                  setState(() {
-                                    _currencyControllers[index].text = currency.code;
-                                  });
+        resizeToAvoidBottomInset: true,
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Form(
+              child: Column(
+                spacing: 8,
+                children: [
+                  Wrap(
+                    spacing: 8.0,
+                    children: AccountType.values.map((AccountType type) {
+                      return ChoiceChip(
+                        label: Text(type
+                            .toString()
+                            .split('.')
+                            .last
+                            .replaceAllMapped(RegExp(r'([a-z])([A-Z])'), (Match m) => "${m[1]} ${m[2]}")
+                            .replaceFirstMapped(RegExp(r'^[a-z]'), (Match m) => m[0]!.toUpperCase())),
+                        selected: _selectedAccountType == type,
+                        onSelected: (bool selected) {
+                          setState(() {
+                            if (selected) {
+                              _selectedAccountType = type;
+                            }
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  TextFormField(
+                    controller: _accountNameController,
+                    decoration: const InputDecoration(
+                        labelText: "Account Name", hintText: "e.g. Cash", border: OutlineInputBorder()),
+                    keyboardType: TextInputType.text,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter an account name';
+                      }
+                      return null;
+                    },
+                  ),
+                  Column(
+                    spacing: 8.0,
+                    children: List.generate(_currencyControllers.length, (index) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: _currencyControllers[index],
+                                readOnly: true,
+                                decoration: const InputDecoration(
+                                  labelText: "Currency",
+                                  border: OutlineInputBorder(),
+                                ),
+                                onTap: () {
+                                  showCurrencyPicker(
+                                    context: context,
+                                    onSelect: (Currency currency) {
+                                      setState(() {
+                                        _currencyControllers[index].text = currency.code;
+                                      });
+                                    },
+                                  );
                                 },
-                              );
-                            },
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please select a currency';
-                              }
-                              return null;
-                            },
-                          ),
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Please select a currency';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _balanceControllers[index],
+                                decoration: const InputDecoration(
+                                    labelText: "Balance", hintText: "e.g. 1000.0", border: OutlineInputBorder()),
+                                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                inputFormatters: [
+                                  // Allow only numbers and decimal point, and limit to two decimal places
+                                  FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d{0,2}')),
+                                ],
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Please enter a balance';
+                                  }
+                                  if (double.tryParse(value) == null) {
+                                    return 'Please enter a valid number';
+                                  }
+                                  final parts = value.split('.');
+                                  if (parts.length == 2 && parts[1].length > 2) {
+                                    return 'Balance cannot have more than two decimal places';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.remove_circle),
+                              onPressed: () {
+                                removeCurrencyField(index);
+                              },
+                            ),
+                          ],
                         ),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _balanceControllers[index],
-                            decoration: const InputDecoration(
-                                labelText: "Balance", hintText: "e.g. 1000.0", border: OutlineInputBorder()),
-                            keyboardType: TextInputType.numberWithOptions(decimal: true),
-                            inputFormatters: [
-                              // Allow only numbers and decimal point, and limit to two decimal places
-                              FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d{0,2}')),
-                            ],
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter a balance';
-                              }
-                              if (double.tryParse(value) == null) {
-                                return 'Please enter a valid number';
-                              }
-                              final parts = value.split('.');
-                              if (parts.length == 2 && parts[1].length > 2) {
-                                return 'Balance cannot have more than two decimal places';
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.remove_circle),
-                          onPressed: () {
-                            removeCurrencyField(index);
-                          },
-                        ),
-                      ],
-                    );
-                  },
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    addCurrencyField('', '0.0');
-                  },
-                  child: const Text("Add Currency"),
-                ),
-                Row(
-                  children: [
-                    ElevatedButton(
-                      onPressed: pickColor,
-                      child: const Text('Pick Color'),
-                    ),
-                    Container(
-                      width: 24,
-                      height: 24,
-                      color: _selectedColor,
-                    ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    ElevatedButton(
-                      onPressed: pickIcon,
-                      child: const Text('Pick Icon'),
-                    ),
-                    if (_selectedIcon != null) Icon(_selectedIcon!.data, color: _selectedColor),
-                  ],
-                ),
-                ElevatedButton(
-                  onPressed: addAccount,
-                  child: const Text("Add Account"),
-                ),
-              ],
+                      );
+                    }),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      addCurrencyField('', '0.0');
+                    },
+                    child: const Text("Add Currency"),
+                  ),
+                  Row(
+                    children: [
+                      ElevatedButton(
+                        onPressed: pickColor,
+                        child: const Text('Pick Color'),
+                      ),
+                      Container(
+                        width: 24,
+                        height: 24,
+                        color: _selectedColor,
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      ElevatedButton(
+                        onPressed: pickIcon,
+                        child: const Text('Pick Icon'),
+                      ),
+                      if (_selectedIcon != null) Icon(_selectedIcon!.data, color: _selectedColor),
+                    ],
+                  ),
+                  ElevatedButton(
+                    onPressed: addAccount,
+                    child: const Text("Add Account"),
+                  ),
+                ],
+              ),
             ),
           ),
         ));

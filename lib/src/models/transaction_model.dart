@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 
 part 'transaction_model.g.dart';
@@ -106,4 +107,34 @@ class TransactionModel {
       transactionTime: transactionTime ?? this.transactionTime,
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is TransactionModel &&
+        other.transactionId == transactionId &&
+        other.userId == userId &&
+        other.accountId == accountId &&
+        listEquals(other.tags, tags) &&
+        other.transactionName == transactionName &&
+        other.amount == amount &&
+        other.currency == currency &&
+        other.description == description &&
+        other.transactionType == transactionType &&
+        other.transactionTime == transactionTime;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        transactionId,
+        userId,
+        accountId,
+        Object.hashAll(tags),
+        transactionName,
+        amount,
+        currency,
+        description,
+        transactionType,
+        transactionTime,
+      );
 }

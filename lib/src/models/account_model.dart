@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 
 part 'account_model.g.dart';
@@ -69,4 +70,30 @@ class AccountModel {
       'createdAt': createdAt,
     };
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is AccountModel &&
+        other.accountId == accountId &&
+        other.userId == userId &&
+        other.accountType == accountType &&
+        other.accountName == accountName &&
+        mapEquals(other.balances, balances) &&
+        mapEquals(other.icon, icon) &&
+        other.color == color &&
+        other.createdAt == createdAt;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        accountId,
+        userId,
+        accountType,
+        accountName,
+        Object.hashAll(balances.entries),
+        Object.hashAll(icon.entries),
+        color,
+        createdAt,
+      );
 }

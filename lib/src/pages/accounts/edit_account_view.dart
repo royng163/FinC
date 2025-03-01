@@ -106,7 +106,7 @@ class EditAccountViewState extends State<EditAccountView> {
         SnackBar(content: Text('Account Updated Successfully')),
       );
 
-      Navigator.pop(context, true);
+      Navigator.pop(context);
     } catch (e) {
       // Handle errors gracefully
       ScaffoldMessenger.of(context).showSnackBar(
@@ -126,7 +126,7 @@ class EditAccountViewState extends State<EditAccountView> {
         SnackBar(content: Text('Account Deleted Successfully')),
       );
 
-      Navigator.pop(context, 'deleted'); // Pass an integer indicating account deletion
+      Navigator.pop(context); // Pass an integer indicating account deletion
     } catch (e) {
       // Handle errors gracefully
       ScaffoldMessenger.of(context).showSnackBar(

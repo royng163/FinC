@@ -19,12 +19,16 @@ class HiveService {
   late final Box<AccountModel> accountsBox;
   late final Box<TransactionModel> transactionsBox;
   late final Box<TagModel> tagsBox;
+  late final Box<dynamic> cacheBox;
+
+  int _lastKnownTransactionCount = 0;
 
   Future<void> init() async {
     settingsBox = await Hive.openBox<dynamic>('settings');
     accountsBox = await Hive.openBox<AccountModel>('accounts');
     transactionsBox = await Hive.openBox<TransactionModel>('transactions');
     tagsBox = await Hive.openBox<TagModel>('tags');
+    cacheBox = await Hive.openBox<dynamic>('cache');
   }
 
   Future<void> syncData() async {
@@ -69,7 +73,7 @@ class HiveService {
     return account;
   }
 
-  Future<List<AccountModel>> getAccounts() async {
+  List<AccountModel> getAccounts() {
     return accountsBox.values.toList();
   }
 
@@ -168,14 +172,14 @@ class HiveService {
     return transaction;
   }
 
-  Future<List<TransactionModel>> getTransactions() async {
+  List<TransactionModel> getTransactions() {
     final transactions = transactionsBox.values.toList();
     // Sort transactions by date (newest first)
     transactions.sort((a, b) => b.transactionTime.compareTo(a.transactionTime));
     return transactions;
   }
 
-  Future<List<TransactionModel>> getAccountTransactions(String accountId) async {
+  List<TransactionModel> getAccountTransactions(String accountId) {
     final List<TransactionModel> allTransactions = [];
 
     // Get transactions where the account is the source
@@ -196,6 +200,28 @@ class HiveService {
     allTransactions.sort((a, b) => b.transactionTime.compareTo(a.transactionTime));
 
     return allTransactions;
+  }
+
+  List<TransactionModel> getPaginatedTransactions(int skip, int limit) {
+    final allTransactions = getTransactions();
+
+    // Apply pagination
+    final end = skip + limit > allTransactions.length ? allTransactions.length : skip + limit;
+    if (skip >= allTransactions.length) {
+      return [];
+    }
+
+    return allTransactions.sublist(skip, end);
+  }
+
+  // Get total count for pagination
+  int getTransactionsCount() {
+    return transactionsBox.values.length;
+  }
+
+  int getAccountTransactionsCount(String accountId) {
+    final List<TransactionModel> allTransactions = getAccountTransactions(accountId);
+    return allTransactions.length;
   }
 
   Future<String> updateTransaction(TransactionModel newTransaction, TransactionModel oldTransaction) async {
@@ -298,12 +324,20 @@ class HiveService {
     await _firestoreService?.setTag(tag);
   }
 
-  Future<List<TagModel>> getTags() async {
+  List<TagModel> getTags() {
     return tagsBox.values.toList();
   }
 
   Future<void> deleteTag(String tagId) async {
     await tagsBox.delete(tagId);
+  }
+
+  int getLastKnownTransactionCount() {
+    return _lastKnownTransactionCount;
+  }
+
+  void setLastKnownTransactionCount(int count) {
+    _lastKnownTransactionCount = count;
   }
 
   Future<void> clearAllData() async {

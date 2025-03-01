@@ -1,7 +1,9 @@
 import 'package:finc/src/helpers/hive_service.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_iconpicker/flutter_iconpicker.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../../components/app_routes.dart';
 import '../../models/tag_model.dart';
 
@@ -24,7 +26,7 @@ class TagsPageState extends State<TagsPage> {
 
   Future<void> _fetchTags() async {
     try {
-      final fetchedTags = await _hiveService.getTags();
+      final fetchedTags = _hiveService.getTags();
 
       setState(() {
         _tags = fetchedTags;
@@ -43,26 +45,43 @@ class TagsPageState extends State<TagsPage> {
       appBar: AppBar(
         title: Text('Tags'),
       ),
-      body: ListView.builder(
-        itemCount: _tags.length,
-        itemBuilder: (context, index) {
-          final tag = _tags[index];
-          return ListTile(
-            leading: Icon(deserializeIcon(tag.icon)?.data, color: Color(tag.color)),
-            title: Text(tag.tagName),
-            trailing: IconButton(
-              icon: Icon(Icons.edit),
-              onPressed: () async {
-                final result = await context.push(
-                  AppRoutes.editTag,
-                  extra: tag,
-                );
+      body: AnimatedBuilder(
+        animation: Hive.box<TagModel>('tags').listenable(),
+        builder: (context, _) {
+          // Check if tags have changed
+          final currentTags = _hiveService.getTags();
+          if (_tags.length != currentTags.length || !listEquals(_tags, currentTags)) {
+            _tags = currentTags;
+          }
 
-                if (result == true) {
-                  _fetchTags(); // Refresh the tags list after editing
-                }
-              },
-            ),
+          if (_tags.isEmpty) {
+            return const Center(
+              child: Text('No tags found. Add some tags to get started!'),
+            );
+          }
+
+          return ListView.builder(
+            itemCount: _tags.length,
+            itemBuilder: (context, index) {
+              final tag = _tags[index];
+              return ListTile(
+                leading: Icon(deserializeIcon(tag.icon)?.data, color: Color(tag.color)),
+                title: Text(tag.tagName),
+                trailing: IconButton(
+                  icon: Icon(Icons.edit),
+                  onPressed: () async {
+                    final result = await context.push(
+                      AppRoutes.editTag,
+                      extra: tag,
+                    );
+
+                    if (result == true) {
+                      _fetchTags(); // Refresh the tags list after editing
+                    }
+                  },
+                ),
+              );
+            },
           );
         },
       ),

@@ -57,8 +57,8 @@ class EditTransactionViewState extends State<EditTransactionView> {
 
   Future<void> fetchData() async {
     try {
-      final accounts = await _hiveService.getAccounts();
-      final tags = await _hiveService.getTags();
+      final accounts = _hiveService.getAccounts();
+      final tags = _hiveService.getTags();
       setState(() {
         _accounts = accounts;
         _tags = tags;

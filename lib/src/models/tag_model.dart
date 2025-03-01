@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 
 part 'tag_model.g.dart';
@@ -57,4 +58,26 @@ class TagModel {
       'color': color,
     };
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is TagModel &&
+        other.tagId == tagId &&
+        other.userId == userId &&
+        other.tagName == tagName &&
+        other.tagType == tagType &&
+        mapEquals(other.icon, icon) &&
+        other.color == color;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        tagId,
+        userId,
+        tagName,
+        tagType,
+        Object.hashAll(icon.entries),
+        color,
+      );
 }
