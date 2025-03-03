@@ -1,7 +1,11 @@
 import 'package:finc/src/components/app_routes.dart';
 import 'package:finc/src/components/app_wrapper.dart';
+import 'package:finc/src/models/account_model.dart';
+import 'package:finc/src/models/tag_model.dart';
 import 'package:finc/src/models/transaction_model.dart';
+import 'package:finc/src/pages/accounts/edit_account_view.dart';
 import 'package:finc/src/pages/home/edit_transaction_view.dart';
+import 'package:finc/src/pages/home/home_page.dart';
 import 'package:finc/src/pages/profile/register_page.dart';
 import 'package:finc/src/pages/tags/edit_tag_view.dart';
 import 'package:finc/src/pages/tags/tags_page.dart';
@@ -15,11 +19,6 @@ import 'package:finc/src/pages/accounts/accounts_page.dart';
 import 'package:finc/src/pages/profile/settings_page.dart';
 import 'package:finc/src/pages/home/add_transaction_view.dart';
 import 'package:finc/src/helpers/settings_service.dart';
-
-import '../models/account_model.dart';
-import '../models/tag_model.dart';
-import '../pages/accounts/edit_account_view.dart';
-import '../pages/home/home_page.dart';
 
 class AppRouter {
   final _rootNavigatorKey = GlobalKey<NavigatorState>();

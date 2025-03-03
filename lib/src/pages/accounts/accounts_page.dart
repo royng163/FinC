@@ -1,17 +1,17 @@
 import 'package:adaptive_navigation/adaptive_navigation.dart';
+import 'package:finc/src/components/app_routes.dart';
 import 'package:finc/src/helpers/balance_service.dart';
 import 'package:finc/src/helpers/hive_service.dart';
+import 'package:finc/src/helpers/settings_service.dart';
+import 'package:finc/src/models/account_model.dart';
+import 'package:finc/src/models/tag_model.dart';
+import 'package:finc/src/models/transaction_model.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_iconpicker/flutter_iconpicker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
-import '../../components/app_routes.dart';
-import '../../helpers/settings_service.dart';
-import '../../models/tag_model.dart';
-import '../../models/account_model.dart';
-import '../../models/transaction_model.dart';
 
 class AccountsPage extends StatefulWidget {
   final SettingsService settingsService;

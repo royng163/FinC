@@ -1,16 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:finc/src/helpers/authentication_service.dart';
+import 'package:finc/src/helpers/firestore_service.dart';
 import 'package:finc/src/helpers/hive_service.dart';
+import 'package:finc/src/helpers/settings_service.dart';
+import 'package:finc/src/models/account_model.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_iconpicker/Models/configuration.dart';
 import 'package:flutter_iconpicker/flutter_iconpicker.dart';
-import '../../helpers/authentication_service.dart';
-import '../../models/account_model.dart';
-import '../../helpers/firestore_service.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:currency_picker/currency_picker.dart';
-import '../../helpers/settings_service.dart';
 
 class AddAccountView extends StatefulWidget {
   final SettingsService settingsService;

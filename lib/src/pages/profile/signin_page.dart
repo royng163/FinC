@@ -1,10 +1,10 @@
 // ignore_for_file: deprecated_member_use
 
+import 'package:finc/src/components/app_routes.dart';
+import 'package:finc/src/helpers/authentication_service.dart';
+import 'package:finc/src/models/user_model.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../helpers/authentication_service.dart';
-import '../../models/user_model.dart';
-import '../../components/app_routes.dart';
 
 class SignInPage extends StatefulWidget {
   const SignInPage({super.key});

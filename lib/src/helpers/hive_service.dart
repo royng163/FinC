@@ -1,9 +1,9 @@
 import 'package:finc/src/helpers/firestore_service.dart';
+import 'package:finc/src/models/account_model.dart';
+import 'package:finc/src/models/tag_model.dart';
+import 'package:finc/src/models/transaction_model.dart';
+import 'package:finc/src/models/user_model.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import '../models/account_model.dart';
-import '../models/tag_model.dart';
-import '../models/transaction_model.dart';
-import '../models/user_model.dart';
 
 class HiveService {
   // Singleton instance

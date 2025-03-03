@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/user_model.dart';
-import '../models/account_model.dart';
-import '../models/transaction_model.dart';
-import '../models/tag_model.dart';
+import 'package:finc/src/models/account_model.dart';
+import 'package:finc/src/models/tag_model.dart';
+import 'package:finc/src/models/transaction_model.dart';
+import 'package:finc/src/models/user_model.dart';
 import 'authentication_service.dart';
 
 class FirestoreService {

@@ -1,7 +1,7 @@
 import 'package:finc/src/helpers/hive_service.dart';
+import 'package:finc/src/models/user_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/user_model.dart';
 
 class AuthenticationService {
   final FirebaseAuth auth = FirebaseAuth.instance;
@@ -221,21 +221,19 @@ class AuthenticationService {
     await auth.signOut();
   }
 
-  // Link anonymous account to email only
-  Future<UserModel?> linkAnonymousAccount({
+  /// Upgrade an anonymous account to a permanent email and password account
+  Future<UserModel?> upgradeAnonymousToEmailPassword({
     required String email,
+    required String password,
   }) async {
     try {
       User? user = auth.currentUser;
 
       if (user != null && user.isAnonymous) {
-        // Create a temporary password for linking
-        String tempPassword = 'TempPassword123!';
-
-        // Create email credential with temporary password
+        // Create credential with user-provided email and password
         AuthCredential credential = EmailAuthProvider.credential(
           email: email,
-          password: tempPassword,
+          password: password,
         );
 
         // Link the anonymous user with the email credential
@@ -248,16 +246,30 @@ class AuthenticationService {
             userId: linkedUser.uid,
             email: email,
           );
-          await db.collection('Users').doc(linkedUser.uid).update(userModel.toFirestore());
 
-          // Update the user's email without requiring a password
-          await linkedUser.verifyBeforeUpdateEmail(email);
+          await db.collection('Users').doc(linkedUser.uid).update(userModel.toFirestore());
 
           return userModel;
         }
+      } else {
+        throw Exception('No anonymous user is currently signed in');
       }
     } on FirebaseAuthException catch (e) {
-      throw Exception(e.message);
+      String message = e.message ?? 'Failed to upgrade account';
+
+      if (e.code == 'email-already-in-use') {
+        message = 'This email is already in use by another account';
+      } else if (e.code == 'weak-password') {
+        message = 'Password should be at least 6 characters';
+      } else if (e.code == 'invalid-email') {
+        message = 'The email address is not valid';
+      } else if (e.code == 'operation-not-allowed') {
+        message = 'Email/password accounts are not enabled';
+      }
+
+      throw Exception(message);
+    } catch (e) {
+      throw Exception('Failed to upgrade account: $e');
     }
 
     return null;

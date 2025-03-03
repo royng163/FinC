@@ -1,9 +1,9 @@
 import 'package:adaptive_navigation/adaptive_navigation.dart';
+import 'package:finc/src/components/app_routes.dart';
 import 'package:finc/src/helpers/hive_service.dart';
+import 'package:finc/src/helpers/settings_service.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../components/app_routes.dart';
-import '../../helpers/settings_service.dart';
 import 'balance_tab.dart';
 
 class HomePage extends StatefulWidget {

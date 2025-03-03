@@ -1,8 +1,8 @@
+// import 'package:finc/src/models/account_model.dart';
+// import 'package:finc/src/models/transaction_model.dart';
 // import 'package:flutter/material.dart';
 // import 'package:cloud_firestore/cloud_firestore.dart';
 // import 'package:firebase_auth/firebase_auth.dart';
-// import '../../models/transaction_model.dart';
-// import '../../models/account_model.dart';
 
 // class RebateCalculatorView extends StatefulWidget {
 //   const RebateCalculatorView({super.key});
@@ -29,13 +29,10 @@
 
 //     try {
 //       final User? user = FirebaseAuth.instance.currentUser;
-//       final transactionsSnapshot = await FirebaseFirestore.instance
-//           .collection('Transactions')
-//           .where('userId', isEqualTo: user?.uid)
-//           .get();
+//       final transactionsSnapshot =
+//           await FirebaseFirestore.instance.collection('Transactions').where('userId', isEqualTo: user?.uid).get();
 
-//       List<TransactionModel> fetchedTransactions =
-//           transactionsSnapshot.docs.map((doc) {
+//       List<TransactionModel> fetchedTransactions = transactionsSnapshot.docs.map((doc) {
 //         return TransactionModel.fromDocument(doc);
 //       }).toList();
 
@@ -53,15 +50,13 @@
 //     }
 //   }
 
-//   List<TransactionModel> filterTransactionsByTags(
-//       List<TransactionModel> transactions, List<String> tags) {
+//   List<TransactionModel> filterTransactionsByTags(List<TransactionModel> transactions, List<String> tags) {
 //     return transactions.where((transaction) {
 //       return tags.every((tag) => transaction.tags.contains(tag));
 //     }).toList();
 //   }
 
-//   double calculateRebate(
-//       List<TransactionModel> transactions, AccountModel account) {
+//   double calculateRebate(List<TransactionModel> transactions, AccountModel account) {
 //     double totalRebate = 0.0;
 
 //     for (var transaction in transactions) {
@@ -84,8 +79,7 @@
 
 //   @override
 //   Widget build(BuildContext context) {
-//     List<TransactionModel> filteredTransactions =
-//         filterTransactionsByTags(transactions, selectedTags);
+//     List<TransactionModel> filteredTransactions = filterTransactionsByTags(transactions, selectedTags);
 
 //     return Scaffold(
 //       appBar: AppBar(
@@ -106,8 +100,7 @@
 //                       if (selected) {
 //                         selectedTags.add('dining');
 //                       } else {
-//                         selectedTags
-//                             .removeWhere((String tag) => tag == 'dining');
+//                         selectedTags.removeWhere((String tag) => tag == 'dining');
 //                       }
 //                     });
 //                   },
@@ -120,8 +113,7 @@
 //                       if (selected) {
 //                         selectedTags.add('entertainment');
 //                       } else {
-//                         selectedTags.removeWhere(
-//                             (String tag) => tag == 'entertainment');
+//                         selectedTags.removeWhere((String tag) => tag == 'entertainment');
 //                       }
 //                     });
 //                   },
@@ -134,8 +126,7 @@
 //                       if (selected) {
 //                         selectedTags.add('alipay');
 //                       } else {
-//                         selectedTags
-//                             .removeWhere((String tag) => tag == 'alipay');
+//                         selectedTags.removeWhere((String tag) => tag == 'alipay');
 //                       }
 //                     });
 //                   },
@@ -148,8 +139,7 @@
 //                       if (selected) {
 //                         selectedTags.add('google_pay');
 //                       } else {
-//                         selectedTags
-//                             .removeWhere((String tag) => tag == 'google_pay');
+//                         selectedTags.removeWhere((String tag) => tag == 'google_pay');
 //                       }
 //                     });
 //                   },
@@ -167,8 +157,7 @@
 //                       return ListTile(
 //                         title: Text(transaction.transactionName),
 //                         subtitle: Text(transaction.tags.join(', ')),
-//                         trailing: Text(
-//                             '${transaction.amount} ${transaction.currency}'),
+//                         trailing: Text('${transaction.amount} ${transaction.currency}'),
 //                       );
 //                     },
 //                   ),

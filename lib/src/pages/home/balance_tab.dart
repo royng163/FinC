@@ -1,9 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:finc/src/components/app_routes.dart';
 import 'package:finc/src/helpers/authentication_service.dart';
 import 'package:finc/src/helpers/balance_service.dart';
 import 'package:finc/src/helpers/hive_service.dart';
+import 'package:finc/src/helpers/settings_service.dart';
 import 'package:finc/src/models/account_model.dart';
 import 'package:finc/src/models/tag_model.dart';
+import 'package:finc/src/models/transaction_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -11,9 +14,6 @@ import 'package:flutter_iconpicker/flutter_iconpicker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
-import '../../components/app_routes.dart';
-import '../../helpers/settings_service.dart';
-import '../../models/transaction_model.dart';
 
 class BalanceTab extends StatefulWidget {
   final SettingsService settingsService;
@@ -431,8 +431,8 @@ class BalanceTabState extends State<BalanceTab> {
                             getDisplayAmount(transaction),
                             style: const TextStyle(fontSize: 18),
                           ),
-                          onTap: () {
-                            context.push(
+                          onTap: () async {
+                            await context.push(
                               AppRoutes.editTransaction,
                               extra: transaction,
                             );

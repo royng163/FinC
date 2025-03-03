@@ -1,8 +1,8 @@
+import 'package:finc/src/helpers/settings_service.dart';
 import 'package:flutter/material.dart';
 import 'package:adaptive_navigation/adaptive_navigation.dart';
 import 'package:go_router/go_router.dart';
 import 'app_routes.dart';
-import '../helpers/settings_service.dart';
 
 class AppWrapper extends StatefulWidget {
   final SettingsService settingsService;

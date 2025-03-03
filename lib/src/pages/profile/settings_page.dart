@@ -1,9 +1,9 @@
+import 'package:finc/src/components/app_routes.dart';
+import 'package:finc/src/helpers/authentication_service.dart';
+import 'package:finc/src/helpers/settings_service.dart';
 import 'package:flutter/material.dart';
 import 'package:currency_picker/currency_picker.dart';
 import 'package:go_router/go_router.dart';
-import '../../components/app_routes.dart';
-import '../../helpers/settings_service.dart';
-import '../../helpers/authentication_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'account_upgrade_page.dart';
 

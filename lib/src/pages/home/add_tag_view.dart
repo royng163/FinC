@@ -1,12 +1,12 @@
 import 'package:finc/src/helpers/authentication_service.dart';
+import 'package:finc/src/helpers/firestore_service.dart';
+import 'package:finc/src/helpers/hive_service.dart';
+import 'package:finc/src/models/tag_model.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter_iconpicker/Models/configuration.dart';
 import 'package:flutter_iconpicker/flutter_iconpicker.dart';
-import '../../helpers/hive_service.dart';
-import '../../models/tag_model.dart';
-import '../../helpers/firestore_service.dart';
 
 class AddTagView extends StatefulWidget {
   const AddTagView({super.key});
