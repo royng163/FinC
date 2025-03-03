@@ -66,8 +66,52 @@ class AuthenticationService {
     return null;
   }
 
-  // Sign out
+  Future<void> deleteCurrentUser() async {
+    try {
+      final user = auth.currentUser;
+      if (user != null) {
+        // Delete user's data from Firestore
+        final batch = db.batch();
+
+        // Delete user document
+        batch.delete(db.collection('Users').doc(user.uid));
+
+        final accountsQuery = await db.collection('Accounts').where('userId', isEqualTo: user.uid).get();
+        for (var doc in accountsQuery.docs) {
+          batch.delete(doc.reference);
+        }
+
+        final transactionsQuery = await db.collection('Transactions').where('userId', isEqualTo: user.uid).get();
+        for (var doc in transactionsQuery.docs) {
+          batch.delete(doc.reference);
+        }
+
+        final tagsQuery = await db.collection('Tags').where('userId', isEqualTo: user.uid).get();
+        for (var doc in tagsQuery.docs) {
+          batch.delete(doc.reference);
+        }
+
+        await batch.commit();
+
+        // Delete the actual Firebase Auth user
+        await user.delete();
+      }
+    } catch (e) {
+      throw Exception('Failed to delete user: $e');
+    }
+  }
+
+// Replace the existing signOut method
   Future<void> signOut() async {
+    final user = auth.currentUser;
+    final isAnonymous = user?.isAnonymous ?? false;
+
+    if (isAnonymous && user != null) {
+      // Delete the anonymous user completely
+      await deleteCurrentUser();
+    }
+
+    // Sign out regardless
     await auth.signOut();
   }
 

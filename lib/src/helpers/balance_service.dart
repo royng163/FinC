@@ -42,16 +42,28 @@ class BalanceService {
 
   /// Fetches the exchange rates from CoinGecko.
   Future<Map<String, dynamic>> _updateExchangeRates() async {
-    final apiKey = dotenv.env['COINGECKO_API_KEY'] ?? '';
-    // Build the request URL. Append the API key if required.
-    final uri = Uri.parse('https://api.coingecko.com/api/v3/exchange_rates$apiKey');
-    final response = await http.get(uri);
-    if (response.statusCode != 200) {
-      throw Exception("Failed to fetch exchange rates");
+    try {
+      final apiKey = dotenv.env['COINGECKO_API_KEY'] ?? '';
+      // Build the request URL. Append the API key if required.
+      final uri = Uri.parse('https://api.coingecko.com/api/v3/exchange_rates$apiKey');
+      final response = await http.get(uri);
+      if (response.statusCode != 200) {
+        throw Exception("Failed to fetch exchange rates: ${response.statusCode}");
+      }
+      final data = json.decode(response.body);
+
+      // Validate response contains required data
+      if (data['rates'] == null) {
+        throw Exception("Invalid exchange rate data format");
+      }
+
+      return {'rates': data['rates'], 'lastUpdatedTimestamp': DateTime.now().millisecondsSinceEpoch};
+    } catch (e) {
+      // ignore: avoid_print
+      print("Error updating exchange rates: $e");
+      // Return empty rates rather than throwing
+      return {'rates': {}, 'lastUpdatedTimestamp': DateTime.now().millisecondsSinceEpoch};
     }
-    final data = json.decode(response.body);
-    // Return only the rates part (adjust as needed).
-    return {'rates': data['rates'], 'lastUpdatedTimestamp': DateTime.now().millisecondsSinceEpoch};
   }
 
   /// Converts an amount from one currency to another using CoinGecko's exchange rates.
@@ -65,23 +77,33 @@ class BalanceService {
       return amount;
     }
 
-    // Parse the response and extract the Bitcoin exchange rates
-    final data = await getExchangeRates();
-    final rates = (data['rates'] as Map<dynamic, dynamic>).cast<String, dynamic>();
+    try {
+      // Parse the response and extract the Bitcoin exchange rates
+      final data = await getExchangeRates();
+      final rates = (data['rates'] as Map<dynamic, dynamic>).cast<String, dynamic>();
 
-    final fromRateData = rates[fromCurrency.toLowerCase()];
-    final toRateData = rates[toCurrency.toLowerCase()];
+      final fromRateData = rates[fromCurrency.toLowerCase()];
+      final toRateData = rates[toCurrency.toLowerCase()];
 
-    if (fromRateData == null || toRateData == null) {
-      throw Exception("Conversion rate not found for $fromCurrency or $toCurrency");
+      if (fromRateData == null || toRateData == null) {
+        // Return original amount instead of throwing - much safer!
+        // ignore: avoid_print
+        print("Conversion rate not found for $fromCurrency or $toCurrency - using 1:1 rate");
+        return amount;
+      }
+
+      // Retrieve the currency to Bitcoin conversion rate
+      final double fromValue = (fromRateData['value'] as num).toDouble();
+      final double toValue = (toRateData['value'] as num).toDouble();
+
+      // Calculate the exchange rate between the two currencies and convert the amount
+      return amount * (toValue / fromValue);
+    } catch (e) {
+      // Handle any errors gracefully
+      // ignore: avoid_print
+      print("Error in currency conversion: $e");
+      return amount; // Return original amount as fallback
     }
-
-    // Retrieve the currency to Bitcoin conversion rate
-    final double fromValue = (fromRateData['value'] as num).toDouble();
-    final double toValue = (toRateData['value'] as num).toDouble();
-
-    // Calculate the exchange rate between the two currencies and convert the amount
-    return amount * (toValue / fromValue);
   }
 
   Future<double> getTotalBalance(String baseCurrency) async {
