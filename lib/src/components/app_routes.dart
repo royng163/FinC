@@ -1,5 +1,7 @@
 class AppRoutes {
   static const String signin = '/signin';
+  static const String register = '/register';
+  static const String verification = '/email-link-sent';
   static const String home = '/home';
   static const String accounts = '/accounts';
   static const String tags = '/tags';

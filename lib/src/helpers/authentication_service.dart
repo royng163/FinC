@@ -1,3 +1,4 @@
+import 'package:finc/src/helpers/hive_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
@@ -5,6 +6,7 @@ import '../models/user_model.dart';
 class AuthenticationService {
   final FirebaseAuth auth = FirebaseAuth.instance;
   final FirebaseFirestore db = FirebaseFirestore.instance;
+  final _hiveService = HiveService();
 
   /// Returns the currently signed in user. Throws an exception if none is signed in.
   User getCurrentUser() {
@@ -19,25 +21,55 @@ class AuthenticationService {
     }
   }
 
-  /// Send sign-in link to email
-  Future<void> sendSignInLinkToEmail({required String email}) async {
+  /// Sign in with email and password
+  Future<UserModel?> signInWithEmailAndPassword({
+    required String email,
+    required String password,
+  }) async {
     try {
-      ActionCodeSettings actionCodeSettings = ActionCodeSettings(
-        url: 'https://yourapp.page.link/signin',
-        handleCodeInApp: true,
-        iOSBundleId: 'com.example.ios',
-        androidPackageName: 'com.example.android',
-        androidInstallApp: true,
-        androidMinimumVersion: '12',
-      );
-
-      await auth.sendSignInLinkToEmail(
+      UserCredential credential = await auth.signInWithEmailAndPassword(
         email: email,
-        actionCodeSettings: actionCodeSettings,
+        password: password,
       );
+      User? user = credential.user;
+
+      if (user != null) {
+        // Get or create the user document in Firestore
+        DocumentSnapshot doc = await db.collection('Users').doc(user.uid).get();
+
+        UserModel userModel;
+        if (!doc.exists) {
+          userModel = UserModel(
+            userId: user.uid,
+            email: email,
+          );
+          await db.collection('Users').doc(user.uid).set(userModel.toFirestore());
+        } else {
+          userModel = UserModel.fromFirestore(doc);
+        }
+
+        // Sync Firestore data to local Hive storage after successful login
+        await _hiveService.syncData();
+
+        return userModel;
+      }
     } on FirebaseAuthException catch (e) {
-      throw Exception(e.message);
+      String message = e.message ?? 'Authentication failed';
+
+      if (e.code == 'user-not-found') {
+        message = 'No user found with this email.';
+      } else if (e.code == 'wrong-password') {
+        message = 'Wrong password provided.';
+      } else if (e.code == 'invalid-credential') {
+        message = 'Invalid email or password.';
+      } else if (e.code == 'user-disabled') {
+        message = 'This account has been disabled.';
+      }
+
+      throw Exception(message);
     }
+
+    return null;
   }
 
   /// Sign in anonymously
@@ -64,6 +96,80 @@ class AuthenticationService {
     }
 
     return null;
+  }
+
+  Future<UserModel?> registerWithEmailAndPassword({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      // Create the user in Firebase Auth
+      UserCredential credential = await auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      User? user = credential.user;
+
+      if (user != null) {
+        // Create the user document in Firestore
+        UserModel userModel = UserModel(
+          userId: user.uid,
+          email: email,
+        );
+
+        await db.collection('Users').doc(user.uid).set(userModel.toFirestore());
+        return userModel;
+      }
+    } on FirebaseAuthException catch (e) {
+      String message = e.message ?? 'Registration failed';
+
+      if (e.code == 'email-already-in-use') {
+        message = 'This email is already in use by another account.';
+      } else if (e.code == 'weak-password') {
+        message = 'The password provided is too weak.';
+      } else if (e.code == 'invalid-email') {
+        message = 'The email address is invalid.';
+      }
+
+      throw Exception(message);
+    }
+
+    return null;
+  }
+
+  /// Re-authenticate the current user with their password
+  /// This is required before performing security-sensitive operations
+  Future<bool> reauthenticateWithPassword(String password) async {
+    try {
+      final user = auth.currentUser;
+      if (user == null || user.email == null) {
+        throw Exception('No authenticated user with email found');
+      }
+
+      // Create credential
+      final credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: password,
+      );
+
+      // Re-authenticate
+      await user.reauthenticateWithCredential(credential);
+      return true;
+    } on FirebaseAuthException catch (e) {
+      String message = e.message ?? 'Re-authentication failed';
+
+      if (e.code == 'wrong-password') {
+        message = 'Incorrect password';
+      } else if (e.code == 'user-mismatch') {
+        message = 'The credential does not match the current user';
+      } else if (e.code == 'user-not-found') {
+        message = 'User not found';
+      } else if (e.code == 'invalid-credential') {
+        message = 'Invalid credentials';
+      }
+
+      throw Exception(message);
+    }
   }
 
   Future<void> deleteCurrentUser() async {

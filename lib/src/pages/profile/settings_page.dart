@@ -145,6 +145,22 @@ class SettingsPageState extends State<SettingsPage> {
           subtitle: _isAnonymous ? const Text('Warning: Guest users will lose all data') : null,
           onTap: () => _handleSignOut(),
         ),
+
+        // Only show delete account option for email users (not anonymous)
+        if (!_isAnonymous)
+          ListTile(
+            leading: Icon(
+              Icons.delete_forever,
+              color: colorScheme.error,
+            ),
+            title: Text(
+              'Delete Account',
+              style: TextStyle(
+                color: colorScheme.error,
+              ),
+            ),
+            onTap: () => _handleDeleteAccount(),
+          ),
       ],
     );
   }
@@ -206,6 +222,147 @@ class SettingsPageState extends State<SettingsPage> {
     if (mounted) {
       context.go(AppRoutes.signin);
     }
+  }
+
+  // DELETE ACCOUNT HELPER
+  Future<void> _handleDeleteAccount() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Account?'),
+        content: const Text(
+          'This action cannot be undone. All your data will be permanently deleted.\n\n'
+          'This includes:\n'
+          '• All accounts and balances\n'
+          '• All transactions\n'
+          '• All tags\n'
+          '• Your user profile\n\n'
+          'Are you absolutely sure?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('CANCEL'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('DELETE PERMANENTLY'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    // Double-confirm with password for email users
+    if (!mounted) return;
+    final confirmPassword = await showDialog<bool>(
+      context: context,
+      builder: (context) => _buildPasswordConfirmDialog(),
+    );
+
+    if (confirmPassword != true) return;
+
+    try {
+      // Show loading indicator
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      // Delete the user account and all data
+      await _authService.deleteCurrentUser();
+
+      // Dismiss loading dialog
+      if (mounted) Navigator.pop(context);
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Account deleted successfully')),
+        );
+
+        // Navigate to sign-in screen
+        context.go(AppRoutes.signin);
+      }
+    } catch (e) {
+      // Dismiss loading dialog
+      if (mounted) Navigator.pop(context);
+
+      // Show error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete account: ${e.toString().replaceFirst('Exception: ', '')}')),
+        );
+      }
+    }
+  }
+
+  // Add password confirmation dialog
+  Widget _buildPasswordConfirmDialog() {
+    final TextEditingController passwordController = TextEditingController();
+    bool isPasswordVisible = false;
+
+    return StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        title: const Text('Confirm Password'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Please enter your password to confirm account deletion:'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: passwordController,
+              decoration: InputDecoration(
+                labelText: 'Password',
+                border: const OutlineInputBorder(),
+                suffixIcon: IconButton(
+                  icon: Icon(isPasswordVisible ? Icons.visibility_off : Icons.visibility),
+                  onPressed: () => setState(() => isPasswordVisible = !isPasswordVisible),
+                ),
+              ),
+              obscureText: !isPasswordVisible,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('CANCEL'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () async {
+              try {
+                // Use the service method for re-authentication
+                await _authService.reauthenticateWithPassword(
+                  passwordController.text,
+                );
+
+                // If no exception was thrown, authentication succeeded
+                // ignore: use_build_context_synchronously
+                Navigator.pop(context, true);
+              } catch (e) {
+                // ignore: use_build_context_synchronously
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+                );
+              }
+            },
+            child: const Text('CONFIRM'),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildSectionHeader(String title) {

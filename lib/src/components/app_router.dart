@@ -2,16 +2,17 @@ import 'package:finc/src/components/app_routes.dart';
 import 'package:finc/src/components/app_wrapper.dart';
 import 'package:finc/src/models/transaction_model.dart';
 import 'package:finc/src/pages/home/edit_transaction_view.dart';
+import 'package:finc/src/pages/profile/register_page.dart';
 import 'package:finc/src/pages/tags/edit_tag_view.dart';
 import 'package:finc/src/pages/tags/tags_page.dart';
 import 'package:flutter/material.dart';
 import 'package:finc/src/pages/accounts/add_account_view.dart';
 import 'package:finc/src/pages/home/add_tag_view.dart';
 import 'package:go_router/go_router.dart';
-import 'package:finc/src/pages/settings/signin_page.dart';
+import 'package:finc/src/pages/profile/signin_page.dart';
 import 'package:finc/src/models/user_model.dart';
 import 'package:finc/src/pages/accounts/accounts_page.dart';
-import 'package:finc/src/pages/settings/settings_page.dart';
+import 'package:finc/src/pages/profile/settings_page.dart';
 import 'package:finc/src/pages/home/add_transaction_view.dart';
 import 'package:finc/src/helpers/settings_service.dart';
 
@@ -57,6 +58,10 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.signin,
         builder: (context, state) => SignInPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.register,
+        builder: (context, state) => const RegisterPage(),
       ),
       GoRoute(
         path: AppRoutes.settings,

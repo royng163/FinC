@@ -49,6 +49,14 @@ class HiveService {
     }
   }
 
+  Future<void> setSettings(String key, dynamic value) async {
+    await settingsBox.put(key, value);
+  }
+
+  dynamic getSettings(String key) {
+    return settingsBox.get(key);
+  }
+
   Future<void> setUser(UserModel user) async {
     await settingsBox.put('user', user);
     await _firestoreService?.setUser(user);
