@@ -15,10 +15,6 @@ class BalanceService {
   final FirebaseDatabase db = FirebaseDatabase.instance;
   User user = AuthenticationService().getCurrentUser();
 
-  BalanceService() {
-    db.setPersistenceEnabled(true);
-  }
-
   /// Returns exchange rates from the Realtime Database if recent (within 5 minutes),
   /// otherwise fetches new rates from CoinGecko, updates the database, and returns them.
   Future<Map<String, dynamic>> getExchangeRates() async {

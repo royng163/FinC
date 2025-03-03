@@ -1,11 +1,11 @@
+import 'package:finc/src/components/app_routes.dart';
 import 'package:finc/src/helpers/hive_service.dart';
+import 'package:finc/src/models/tag_model.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_iconpicker/flutter_iconpicker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import '../../components/app_routes.dart';
-import '../../models/tag_model.dart';
 
 class TagsPage extends StatefulWidget {
   const TagsPage({super.key});

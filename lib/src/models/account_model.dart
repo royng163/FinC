@@ -47,12 +47,21 @@ class AccountModel {
   factory AccountModel.fromFirestore(DocumentSnapshot snapshot) {
     final data = snapshot.data() as Map<String, dynamic>;
 
+    Map<String, double> balances = {};
+    final rawBalances = data['balances'] as Map<String, dynamic>?;
+    if (rawBalances != null) {
+      rawBalances.forEach((key, value) {
+        // Convert int to double if needed
+        balances[key] = value is int ? value.toDouble() : value as double;
+      });
+    }
+
     return AccountModel(
       accountId: snapshot.id,
       userId: data['userId'],
       accountType: AccountType.values[data['accountType']],
       accountName: data['accountName'],
-      balances: Map<String, double>.from(data['balances']),
+      balances: balances,
       icon: Map<String, dynamic>.from(data['icon']),
       color: data['color'],
       createdAt: data['createdAt'],

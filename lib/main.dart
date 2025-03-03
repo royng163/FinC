@@ -4,6 +4,7 @@ import 'package:finc/src/models/timestamp_adapter.dart';
 import 'package:finc/src/models/transaction_model.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'firebase_options.dart';
@@ -14,6 +15,12 @@ import 'src/models/account_model.dart';
 Future<void> main() async {
   // Initialize Firebase
   WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    systemNavigationBarColor: Colors.white,
+    statusBarIconBrightness: Brightness.dark,
+    systemNavigationBarIconBrightness: Brightness.dark,
+  ));
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );

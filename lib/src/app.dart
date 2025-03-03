@@ -1,3 +1,6 @@
+// ignore_for_file: deprecated_member_use
+
+import 'package:dynamic_color/dynamic_color.dart';
 import 'package:finc/src/components/app_router.dart';
 import 'package:finc/src/helpers/authentication_service.dart';
 import 'package:finc/src/models/user_model.dart';
@@ -21,6 +24,9 @@ class MyAppState extends State<MyApp> {
   final AuthenticationService authService = AuthenticationService();
   late Future<AppRouter> appRouter;
   UserModel? currentUser;
+
+  // Define your seed colors
+  static const _primarySeedColor = Color(0xFF1A73E8); // Blue color similar to Google apps
 
   @override
   void initState() {
@@ -52,7 +58,11 @@ class MyAppState extends State<MyApp> {
       future: appRouter,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const MaterialApp(
+            home: Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            ),
+          );
         } else if (snapshot.hasError) {
           return MaterialApp(
             home: Scaffold(
@@ -66,41 +76,66 @@ class MyAppState extends State<MyApp> {
           return ListenableBuilder(
             listenable: widget.settingsService,
             builder: (BuildContext context, Widget? child) {
-              return MaterialApp.router(
-                // Providing a restorationScopeId allows the Navigator built by the
-                // MaterialApp to restore the navigation stack when a user leaves and
-                // returns to the app after it has been killed while running in the
-                // background.
-                restorationScopeId: 'app',
+              return DynamicColorBuilder(
+                builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
+                  // Create color schemes based on dynamic colors if available (Android 12+)
+                  // or fall back to our seed color
+                  ColorScheme lightColorScheme;
+                  ColorScheme darkColorScheme;
 
-                // Provide the generated AppLocalizations to the MaterialApp. This
-                // allows descendant Widgets to display the correct translations
-                // depending on the user's locale.
-                localizationsDelegates: const [
-                  AppLocalizations.delegate,
-                  GlobalMaterialLocalizations.delegate,
-                  GlobalWidgetsLocalizations.delegate,
-                  GlobalCupertinoLocalizations.delegate,
-                ],
-                supportedLocales: const [
-                  Locale('en', ''), // English, no country code
-                ],
+                  if (lightDynamic != null && darkDynamic != null) {
+                    // On Android 12+, use device color scheme
+                    lightColorScheme = lightDynamic.harmonized();
+                    darkColorScheme = darkDynamic.harmonized();
+                  } else {
+                    // Use our default color scheme
+                    lightColorScheme = ColorScheme.fromSeed(
+                      seedColor: _primarySeedColor,
+                      brightness: Brightness.light,
+                    );
+                    darkColorScheme = ColorScheme.fromSeed(
+                      seedColor: _primarySeedColor,
+                      brightness: Brightness.dark,
+                    );
+                  }
 
-                // Use AppLocalizations to configure the correct application title
-                // depending on the user's locale.
-                //
-                // The appTitle is defined in .arb files found in the localization
-                // directory.
-                onGenerateTitle: (BuildContext context) => AppLocalizations.of(context)!.appTitle,
+                  return MaterialApp.router(
+                    // Providing a restorationScopeId allows the Navigator built by the
+                    // MaterialApp to restore the navigation stack when a user leaves and
+                    // returns to the app after it has been killed while running in the
+                    // background.
+                    restorationScopeId: 'app',
 
-                // Define a light and dark color theme. Then, read the user's
-                // preferred ThemeMode (light, dark, or system default) from the
-                // settingsService to display the correct theme.
-                theme: ThemeData(),
-                darkTheme: ThemeData.dark(),
-                themeMode: widget.settingsService.themeMode,
+                    // Provide the generated AppLocalizations to the MaterialApp. This
+                    // allows descendant Widgets to display the correct translations
+                    // depending on the user's locale.
+                    localizationsDelegates: const [
+                      AppLocalizations.delegate,
+                      GlobalMaterialLocalizations.delegate,
+                      GlobalWidgetsLocalizations.delegate,
+                      GlobalCupertinoLocalizations.delegate,
+                    ],
+                    supportedLocales: const [
+                      Locale('en', ''), // English, no country code
+                    ],
 
-                routerConfig: appRouter.router,
+                    // Use AppLocalizations to configure the correct application title
+                    // depending on the user's locale.
+                    onGenerateTitle: (BuildContext context) => AppLocalizations.of(context)!.appTitle,
+
+                    // Define a light and dark color theme with Material 3
+                    theme: ThemeData(
+                      useMaterial3: true,
+                      colorScheme: lightColorScheme,
+                    ),
+                    darkTheme: ThemeData(
+                      useMaterial3: true,
+                      colorScheme: darkColorScheme,
+                    ),
+                    themeMode: widget.settingsService.themeMode,
+                    routerConfig: appRouter.router,
+                  );
+                },
               );
             },
           );
