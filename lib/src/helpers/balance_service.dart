@@ -22,24 +22,22 @@ class BalanceService {
   /// Returns exchange rates from the Realtime Database if recent (within 5 minutes),
   /// otherwise fetches new rates from CoinGecko, updates the database, and returns them.
   Future<Map<String, dynamic>> getExchangeRates() async {
-    final ref = db.ref('fxRates');
-    final snapshot = await ref.get();
-    final now = DateTime.now();
-
-    if (snapshot.exists && snapshot.value != null) {
-      final data = Map<String, dynamic>.from(snapshot.value as Map);
-      final int storedTimestamp = data['lastUpdatedTimestamp'] ?? 0;
-      final lastUpdated = DateTime.fromMillisecondsSinceEpoch(storedTimestamp);
-      if (now.difference(lastUpdated) < Duration(minutes: 5)) {
-        // Use cached rates from Realtime Database
-        return data;
-      }
+    final newRates = _hiveService.getFxRates();
+    if (newRates != null) {
+      return newRates;
     }
-    // Rates missing or older than 5 minutes: fetch, update cloud, and return new rates.
-    final newRates = await _updateExchangeRates();
-    newRates['lastUpdatedTimestamp'] = now.millisecondsSinceEpoch;
-    await ref.set(newRates);
-    return newRates;
+
+    final updatedRates = await _updateExchangeRates();
+    _hiveService.setFxRates(updatedRates);
+    return updatedRates;
+
+    // final ref = db.ref('fxRates');
+    // final snapshot = await ref.get();
+
+    // if (snapshot.exists && snapshot.value != null) {
+    //   return Map<String, dynamic>.from(snapshot.value as Map);
+    // }
+    // throw Exception("Exchange rates not available");
   }
 
   /// Fetches the exchange rates from CoinGecko.
@@ -53,9 +51,7 @@ class BalanceService {
     }
     final data = json.decode(response.body);
     // Return only the rates part (adjust as needed).
-    return {
-      'rates': data['rates'],
-    };
+    return {'rates': data['rates'], 'lastUpdatedTimestamp': DateTime.now().millisecondsSinceEpoch};
   }
 
   /// Converts an amount from one currency to another using CoinGecko's exchange rates.

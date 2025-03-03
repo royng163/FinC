@@ -218,23 +218,16 @@ class BalanceTabState extends State<BalanceTab> {
             }
 
             // Check if transactions changed - compare counts to avoid full comparison
-            int transactionCount = _hiveService.getTransactionsCount();
-
-            // Only refresh transactions if data has actually changed
-            if (dataChanged ||
-                _transactions.isEmpty ||
-                transactionCount != _hiveService.getLastKnownTransactionCount()) {
-              // Store the current count for future comparison
-              _hiveService.setLastKnownTransactionCount(transactionCount);
-
+            int currentTransactionCount = _hiveService.getTransactionsCount();
+            if (dataChanged || _transactions.isEmpty || _transactions.length != currentTransactionCount) {
               // Reset to first page if needed
-              if (_transactions.isEmpty || transactionCount < _transactions.length) {
+              if (_transactions.isEmpty || currentTransactionCount < _transactions.length) {
                 _transactions = _hiveService.getPaginatedTransactions(0, _pageSize);
               } else {
                 // Otherwise refresh the current page
                 _transactions = _hiveService.getPaginatedTransactions(0, _transactions.length);
               }
-              _hasMore = _transactions.length < transactionCount;
+              _hasMore = _transactions.length < currentTransactionCount;
 
               // Queue balance update only when data changes
               // This significantly reduces unnecessary calculations

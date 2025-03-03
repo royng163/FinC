@@ -19,16 +19,14 @@ class HiveService {
   late final Box<AccountModel> accountsBox;
   late final Box<TransactionModel> transactionsBox;
   late final Box<TagModel> tagsBox;
-  late final Box<dynamic> cacheBox;
-
-  int _lastKnownTransactionCount = 0;
+  late final Box<dynamic> fxRatesBox;
 
   Future<void> init() async {
     settingsBox = await Hive.openBox<dynamic>('settings');
     accountsBox = await Hive.openBox<AccountModel>('accounts');
     transactionsBox = await Hive.openBox<TransactionModel>('transactions');
     tagsBox = await Hive.openBox<TagModel>('tags');
-    cacheBox = await Hive.openBox<dynamic>('cache');
+    fxRatesBox = await Hive.openBox<dynamic>('fxRates');
   }
 
   Future<void> syncData() async {
@@ -332,12 +330,27 @@ class HiveService {
     await tagsBox.delete(tagId);
   }
 
-  int getLastKnownTransactionCount() {
-    return _lastKnownTransactionCount;
+  // Save exchange rates to local cache
+  Future<void> setFxRates(Map<String, dynamic> rates) async {
+    await fxRatesBox.put('rates', rates);
+    await fxRatesBox.put('lastUpdated', DateTime.now().millisecondsSinceEpoch);
   }
 
-  void setLastKnownTransactionCount(int count) {
-    _lastKnownTransactionCount = count;
+// Get cached exchange rates
+  Map<String, dynamic>? getFxRates() {
+    final rates = fxRatesBox.get('rates');
+    final lastUpdated = fxRatesBox.get('lastUpdated');
+
+    if (rates != null && lastUpdated != null) {
+      // Check if data is fresh enough based on parameter
+      final now = DateTime.now();
+      final updateTime = DateTime.fromMillisecondsSinceEpoch(lastUpdated);
+      if (now.difference(updateTime) < Duration(minutes: 5)) {
+        return rates;
+      }
+    }
+
+    return null;
   }
 
   Future<void> clearAllData() async {
