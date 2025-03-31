@@ -1,23 +1,22 @@
 # FinC - Financial Management App
 A cross-platform expense tracking application built with Flutter and Firebase, featuring multi-currency support and data synchronization.
 
-<div align="center">
-  <div style="display: inline-block; text-align: center; margin: 0 10px;">
-    <img src="assets/screenshots/home_page.png" width="300" alt="Home Page">
-    <br>
-    <em>Home Page with accounts summary</em>
-  </div>
-  <div style="display: inline-block; text-align: center; margin: 0 10px;">
-    <img src="assets/screenshots/account_page.png" width="300" alt="Account Page">
-    <br>
-    <em>Account Page with individual summary</em>
-  </div>
-  <div style="display: inline-block; text-align: center; margin: 0 10px;">
-    <img src="assets/screenshots/edit_transaction_page.png" width="300" alt="Edit Transaction Page">
-    <br>
-    <em>Edit transaction page</em>
-  </div>
-</div>
+<table>
+  <tr>
+    <td align="center">
+      <img src="assets/screenshots/home_page.png" width="280" alt="Home Page"><br>
+      <em>Home Page</em>
+    </td>
+    <td align="center">
+      <img src="assets/screenshots/account_page.png" width="280" alt="Account Page"><br>
+      <em>Account Page</em>
+    </td>
+    <td align="center">
+      <img src="assets/screenshots/edit_transaction_page.png" width="280" alt="Edit Transaction Page"><br>
+      <em>Edit Transaction Page</em>
+    </td>
+  </tr>
+</table>
 
 ## Key Features
 - **Financial Tracking**: Manage expenses, income, and transfers between accounts
