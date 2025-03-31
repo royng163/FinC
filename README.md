@@ -1,18 +1,32 @@
-# FinC
-A expense and portfolio tracking web app built with Flutter and Firebase.
+# FinC - Financial Management App
+A cross-platform expense tracking application built with Flutter and Firebase, featuring multi-currency support and data synchronization.
 
-## Features
-#### Expense and Portfolio Tracking
-- Track expenses, income and portfolio
-- Manage by accounts and categories
-- Multi-currency support
-#### User Experience
-- User-friendly interface
-- Dark mode support
-- Multi-language support
-- Responsive design for mobile and desktop
-#### Data Management
-- Sync data across devices
-- Cloud backup and restore
-- Secure authentication with Firebase
-- Real-time updates and notifications
+<div align="center">
+  <div style="display: inline-block; text-align: center; margin: 0 10px;">
+    <img src="assets/screenshots/home_page.png" width="300" alt="Home Page">
+    <br>
+    <em>Home Page with accounts summary</em>
+  </div>
+  <div style="display: inline-block; text-align: center; margin: 0 10px;">
+    <img src="assets/screenshots/account_page.png" width="300" alt="Account Page">
+    <br>
+    <em>Account Page with individual summary</em>
+  </div>
+  <div style="display: inline-block; text-align: center; margin: 0 10px;">
+    <img src="assets/screenshots/edit_transaction_page.png" width="300" alt="Edit Transaction Page">
+    <br>
+    <em>Edit transaction page</em>
+  </div>
+</div>
+
+## Key Features
+- **Financial Tracking**: Manage expenses, income, and transfers between accounts
+- **Multi-Currency Support**: Handle transactions in different currencies via CoinGecko API
+- **Cross-Device Sync**: Seamless synchronization across devices with offline capability
+- **Modern UI/UX**: Material 3 design with dark/light theme support and responsive layout
+- **Data Visualization**: Financial summaries and transaction history
+
+## Tech Stack
+- **Frontend**: Flutter
+- **Backend**: Firebase (Authentication and more), CoinGecko API for currency exchange rates
+- **Storage**: Hive(local caching), Firestore(data syncing)
